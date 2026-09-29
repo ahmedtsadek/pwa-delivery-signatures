@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Delivery Platform Windows Virtual Printer
-Version 0.8.0
+Version 1.1.4
 
 Creates a Windows printer queue backed by the built-in Microsoft Print To PDF
 driver, silently captures PDFs to a local spool file, and uploads completed
@@ -36,8 +36,8 @@ from typing import Optional
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-APP_NAME = "Delivery Platform Virtual Printer"
-VERSION = "0.8.0"
+APP_NAME = "PWA Pharmacy Delivery Printer"
+VERSION = "1.1.4"
 APP_DIR_NAME = "DeliveryPrinter"
 TASK_NAME = "Delivery Platform Print Agent"
 
@@ -53,8 +53,8 @@ FAILED_DIR = PROGRAM_DATA / "Failed"
 SPOOL_FILE = SPOOL_DIR / "delivery-current.pdf"
 
 DEFAULTS = {
-    "printer_name": "Delivery Platform Printer",
-    "api_base": "https://delivery.example.com",
+    "printer_name": "PWA Pharmacy Delivery Printer",
+    "api_base": "https://delivery.tee4it.com",
     "organization_id": "",
     "upload_endpoint": "/api/ingest/pdf",
     "start_with_windows": True,
@@ -433,11 +433,39 @@ def upload_pdf(path: Path, cfg: dict) -> tuple[bool, str]:
         return False, str(exc)
 
 def test_connection(cfg: dict) -> tuple[bool, str]:
+    token = get_token(cfg)
+    if not token:
+        return False, "Print Agent token is not configured"
+    organization_id = str(cfg.get("organization_id", "")).strip()
+    if not organization_id:
+        return False, "Organization ID is not configured"
+
     base = str(cfg["api_base"]).rstrip("/")
+    req = urllib.request.Request(
+        base + "/api/print-agent/check",
+        method="GET",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "X-Organization-ID": organization_id,
+            "User-Agent": f"PWA-Pharmacy-Delivery-Printer/{VERSION}",
+            "Accept": "application/json",
+        },
+    )
     try:
-        req = urllib.request.Request(base + "/health", method="GET")
         with urllib.request.urlopen(req, timeout=10) as response:
-            return response.status == 200, f"HTTP {response.status}"
+            body = response.read().decode("utf-8", errors="replace")
+            if response.status == 200:
+                try:
+                    data = json.loads(body)
+                    org = data.get("organization", {}).get("name", organization_id)
+                    agent = data.get("agent", {}).get("name", "Print Agent")
+                    return True, f"Connected to {org} as {agent}"
+                except Exception:
+                    return True, f"HTTP {response.status}"
+            return False, f"HTTP {response.status}: {body}"
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        return False, f"HTTP {exc.code}: {body}"
     except Exception as exc:
         return False, str(exc)
 
@@ -552,7 +580,7 @@ class InstallerWindow:
 
         ttk.Label(
             outer,
-            text="Delivery Platform Virtual Printer",
+            text="PWA Pharmacy Delivery Printer",
             font=("Segoe UI", 18, "bold"),
         ).grid(row=0, column=0, columnspan=2, sticky="w")
 
@@ -567,7 +595,7 @@ class InstallerWindow:
 
         fields = [
             ("Virtual printer name", self.printer_name),
-            ("Delivery Platform URL", self.api_base),
+            ("PWA Pharmacy Delivery URL", self.api_base),
             ("Organization ID", self.organization_id),
         ]
 
@@ -679,7 +707,7 @@ class InstallerWindow:
             ok, detail = test_connection(cfg)
             if ok:
                 self.set_status("API is reachable: " + detail)
-                messagebox.showinfo(APP_NAME, "Delivery Platform API is reachable.")
+                messagebox.showinfo(APP_NAME, "Print Agent credentials and API connection are valid.")
             else:
                 self.set_status("API test failed: " + detail)
                 messagebox.showerror(APP_NAME, detail)

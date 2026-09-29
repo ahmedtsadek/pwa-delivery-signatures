@@ -167,7 +167,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.0' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.4' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
@@ -281,6 +281,17 @@ app.post('/api/organizations/:organizationId/print-agents', async (req, res) => 
   const rawToken = randomToken();
   const agent = await prisma.printAgentCredential.create({ data: { organizationId: req.params.organizationId, name: parsed.data.name.trim(), tokenHash: tokenHash(rawToken) } });
   res.status(201).json({ agent: { id: agent.id, name: agent.name, active: agent.active }, token: rawToken });
+});
+
+app.get('/api/print-agent/check', async (req, res) => {
+  const organizationId = String(req.header('x-organization-id') || '').trim();
+  if (!organizationId) return res.status(400).json({ error: 'X-Organization-ID is required' });
+  const agent = await printAgentFromRequest(req);
+  if (!agent) return res.status(401).json({ error: 'Invalid or revoked Print Agent token' });
+  if (agent.organizationId !== organizationId) return res.status(403).json({ error: 'Print Agent token does not belong to this organization' });
+  const organization = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, name: true } });
+  if (!organization) return res.status(404).json({ error: 'Organization not found' });
+  res.json({ ok: true, organization, agent: { id: agent.id, name: agent.name } });
 });
 
 app.post('/api/print-agents/:agentId/revoke', async (req, res) => {
