@@ -8,13 +8,12 @@ services:
       - /bin/sh
       - -ec
       - |
-        secret=/run/pwa-secrets/database
-        if [ ! -s "$$secret" ]; then
+        if [ ! -s /run/pwa-secrets/database ]; then
           umask 077
-          mkdir -p "$$(dirname "$$secret")"
-          head -c 48 /dev/urandom | base64 | tr -d '\n' > "$$secret"
+          mkdir -p /run/pwa-secrets
+          head -c 48 /dev/urandom | base64 | tr -d '\n' > /run/pwa-secrets/database
         fi
-        export POSTGRES_PASSWORD_FILE="$$secret"
+        export POSTGRES_PASSWORD_FILE=/run/pwa-secrets/database
         exec docker-entrypoint.sh postgres
     environment:
       POSTGRES_USER: delivery
@@ -106,10 +105,10 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "1.1.1"
+  version: "1.1.2"
   update_at: "2026-09-29"
   release_notes:
-    en_US: Uses the new PWA Pharmacy Delivery icon across CasaOS and installed phone PWAs.
+    en_US: Fixes CasaOS secret generation so database credentials are created correctly during installation.
   repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
   docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
   tips:
