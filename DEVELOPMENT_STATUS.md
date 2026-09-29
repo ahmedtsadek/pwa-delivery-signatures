@@ -157,3 +157,21 @@ Validation in the packaging environment:
 
 - Bumped workspace package versions to 0.8.0.
 - Added GitHub Actions validation workflow for dependency install, Prisma client generation, API build, web build and legacy Print Agent build.
+
+
+## CI / pilot hardening follow-up
+
+- Fixed the first GitHub Actions failure: `actions/setup-node` had npm caching enabled without a committed npm lockfile, so setup failed before dependencies were installed.
+- CI now installs dependencies without the lockfile-dependent cache setting.
+- Added a synthetic, non-PHI Saint Mary-style 3-page receipt smoke test.
+- The smoke test validates:
+  - template detection
+  - delivery address parsing
+  - facility name
+  - driver alias normalization
+  - Log # / barcode extraction
+  - patient extraction
+  - multi-page Rx extraction
+  - signature stamping
+  - signed PDF remains a valid 3-page PDF
+- The synthetic test intentionally uses fake patient/address data so no production PHI is committed to the public repository.
