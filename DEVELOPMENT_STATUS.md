@@ -1,4 +1,4 @@
-# Development Status — v0.8
+# Development Status — v1.0
 
 ## Completed through v0.6
 
@@ -175,3 +175,18 @@ Validation in the packaging environment:
   - signature stamping
   - signed PDF remains a valid 3-page PDF
 - The synthetic test intentionally uses fake patient/address data so no production PHI is committed to the public repository.
+
+
+## v1.0 completion block
+
+- Added PostgreSQL-backed API integration testing for bootstrap, login, driver creation, Print Agent creation, authenticated receipt ingest, alias auto-assignment, delivery listing, duplicate detection and pilot-readiness checks.
+- Fixed deployment routing variable compatibility: `ROUTER_BASE_URL` now matches Docker/CasaOS configuration while retaining the old alias.
+- Added production backup and guarded restore scripts for PostgreSQL plus receipt/signature storage.
+- Completed driver exception buttons for unable-to-access, wrong-package and other outcomes.
+- Added the missing Sibling recipient relationship option.
+- Completed PWA install metadata and offline icon caching.
+- Added configurable browser CORS allow-list support and baseline browser security headers.
+- Updated all workspace packages and API health reporting to v1.0.0.
+- Added RELEASE.md to define the real-world pilot gate.
+
+At v1.0, remaining items are real-device / real-pharmacy environment validation rather than missing core workflow code.
