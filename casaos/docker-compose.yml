@@ -93,10 +93,10 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "1.0.0"
+  version: "1.0.1"
   update_at: "2026-09-29"
   release_notes:
-    en_US: First CasaOS one-click release.
+    en_US: Fix CasaOS internal service networking and database hostname resolution.
   repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
   docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
   tips:
