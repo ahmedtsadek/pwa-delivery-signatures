@@ -66,3 +66,29 @@ DELIVERY_API_BASE=https://delivery.example.com
 ```
 
 Because the web container proxies `/api/*`, no public API port is required.
+
+
+## Backup and restore
+
+Create a timestamped database + receipt/signature backup:
+
+```bash
+chmod +x scripts/backup.sh scripts/restore.sh
+./scripts/backup.sh
+```
+
+Backups default to:
+
+```text
+/DATA/AppData/pwa-delivery-signatures/backups/<timestamp>/
+```
+
+Restore a selected backup:
+
+```bash
+./scripts/restore.sh /DATA/AppData/pwa-delivery-signatures/backups/<timestamp>
+```
+
+The restore command requires typing `RESTORE` before it replaces the database and storage.
+
+For production, set `PUBLIC_BASE_URL` in `.env` to the exact HTTPS URL used by staff and drivers. This becomes the browser CORS allow-list origin.
