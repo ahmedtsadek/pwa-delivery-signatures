@@ -1,0 +1,39 @@
+name: Validate Delivery Platform
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://delivery:delivery@localhost:5432/delivery
+      NEXT_PUBLIC_API_URL: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w @delivery/api
+
+      - name: Build API
+        run: npm run build -w @delivery/api
+
+      - name: Build web
+        run: npm run build -w @delivery/web
+
+      - name: Build legacy print agent
+        run: npm run build -w @delivery/print-agent

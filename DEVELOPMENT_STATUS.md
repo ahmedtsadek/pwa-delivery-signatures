@@ -124,3 +124,36 @@ Validation in the packaging environment:
 3. Confirm the Microsoft Print To PDF local-file port behaves silently on the target Windows machines.
 4. Run an end-to-end real receipt test:
    `Pharmacy software → virtual printer → API → parsed delivery → driver PWA → barcode → signature → signed PDF`.
+
+
+## Added after the initial v0.8 printer work
+
+### Pilot operations / proof view
+
+- Added dispatcher Deliveries screen with search and status filters.
+- Added delivery detail screen showing:
+  - Log #
+  - patient/address
+  - driver
+  - barcode verification
+  - recipient/relationship
+  - receipt import history
+  - audit timeline
+- Added secure authenticated streaming for:
+  - original receipt PDF
+  - signed receipt PDF
+  - captured signature PNG
+- Object-storage keys are not exposed to the browser.
+- Added Pilot Readiness dashboard with checks for:
+  - active Print Agent
+  - active driver
+  - at least one imported receipt
+  - unassigned imports
+  - parser review items
+  - observed signed-PDF completion flow
+- Added Deliveries and Pilot Readiness shortcuts to the dispatcher dashboard.
+
+### CI validation
+
+- Bumped workspace package versions to 0.8.0.
+- Added GitHub Actions validation workflow for dependency install, Prisma client generation, API build, web build and legacy Print Agent build.
