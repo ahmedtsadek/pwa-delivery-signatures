@@ -50,3 +50,11 @@ If CasaOS substitutes a different `$AppID`, the paths will follow that installed
 
 The Windows virtual printer is installed separately on the pharmacy PC. Its Delivery
 Platform URL should be the public HTTPS address (or LAN URL during local testing).
+
+
+## CasaOS v1.0.2 compatibility note
+
+Some CasaOS Custom Install versions flatten imported services onto Docker's default
+`bridge` network and do not preserve Compose service DNS. v1.0.2 therefore uses
+explicit service links (`postgres:postgres` and `api:api`) and fixed AppData paths
+instead of depending on a custom Compose network or `$AppID` substitution.
