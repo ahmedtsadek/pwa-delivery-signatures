@@ -1,20 +1,31 @@
 name: pwa-delivery-signatures
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    entrypoint:
+  secret-init:
+    image: alpine:3.22
+    restart: "no"
+    command:
       - /bin/sh
       - -ec
       - |
+        mkdir -p /run/pwa-secrets
         if [ ! -s /run/pwa-secrets/database ]; then
           umask 077
-          mkdir -p /run/pwa-secrets
           head -c 48 /dev/urandom | base64 | tr -d '\n' > /run/pwa-secrets/database
         fi
-        export POSTGRES_PASSWORD_FILE=/run/pwa-secrets/database
-        exec docker-entrypoint.sh postgres
+        chmod 600 /run/pwa-secrets/database
+        test -s /run/pwa-secrets/database
+    volumes:
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/secrets
+        target: /run/pwa-secrets
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      secret-init:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: delivery
       POSTGRES_PASSWORD_FILE: /run/pwa-secrets/database
@@ -26,6 +37,7 @@ services:
       - type: bind
         source: /DATA/AppData/com.tee4it.delivery-platform/secrets
         target: /run/pwa-secrets
+        read_only: true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U delivery -d delivery"]
       interval: 10s
@@ -105,10 +117,10 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "1.1.2"
+  version: "1.1.3"
   update_at: "2026-09-29"
   release_notes:
-    en_US: Fixes CasaOS secret generation so database credentials are created correctly during installation.
+    en_US: Moves database secret creation into a dedicated one-shot initializer container for CasaOS compatibility.
   repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
   docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
   tips:
