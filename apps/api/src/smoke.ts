@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { parseReceiptPdf } from './receiptParser.js';
 import { stampSaintMaryReceipt } from './signedReceipt.js';
+import { improveRoadOrder } from './routing.js';
 
 async function syntheticReceipt() {
   const pdf = await PDFDocument.create();
@@ -77,6 +78,28 @@ async function main() {
   assert.ok(signed.length > receipt.length, 'signed PDF should contain added proof content');
   const signedDoc = await PDFDocument.load(signed);
   assert.equal(signedDoc.getPageCount(), 3);
+
+  const routeCandidates = [
+    { id: 'A', latitude: 0, longitude: 0 },
+    { id: 'B', latitude: 0, longitude: 0 },
+    { id: 'C', latitude: 0, longitude: 0 },
+    { id: 'D', latitude: 0, longitude: 0 }
+  ];
+  // Matrix indexes are [origin, A, B, C, D]. The initial A->C->B->D
+  // ordering is deliberately expensive; bounded 2-opt should improve it.
+  const matrix = [
+    [0, 1, 9, 2, 9],
+    [1, 0, 1, 8, 9],
+    [9, 1, 0, 1, 2],
+    [2, 8, 1, 0, 1],
+    [9, 9, 2, 1, 0]
+  ];
+  const improved = improveRoadOrder(
+    [routeCandidates[0], routeCandidates[2], routeCandidates[1], routeCandidates[3]],
+    routeCandidates,
+    matrix
+  );
+  assert.notDeepEqual(improved.map(x => x.id), ['A','C','B','D']);
 
   console.log(JSON.stringify({
     ok: true,
