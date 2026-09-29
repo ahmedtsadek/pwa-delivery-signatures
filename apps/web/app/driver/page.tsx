@@ -474,6 +474,9 @@ export default function Driver() {
           <button className={`choiceButton ${exceptions[d.id]?.outcome === 'PACKAGE_NOT_PROVIDED' ? 'selected' : ''}`} onClick={() => setException(d.id, 'PACKAGE_NOT_PROVIDED')}>NOT GIVEN TO ME</button>
           <button className={`choiceButton ${exceptions[d.id]?.outcome === 'RECIPIENT_NOT_AVAILABLE' ? 'selected' : ''}`} onClick={() => setException(d.id, 'RECIPIENT_NOT_AVAILABLE')}>PERSON NOT AVAILABLE</button>
           <button className={`choiceButton ${exceptions[d.id]?.outcome === 'REFUSED' ? 'selected' : ''}`} onClick={() => setException(d.id, 'REFUSED')}>REFUSED</button>
+          <button className={`choiceButton ${exceptions[d.id]?.outcome === 'UNABLE_TO_ACCESS' ? 'selected' : ''}`} onClick={() => setException(d.id, 'UNABLE_TO_ACCESS')}>CAN'T ACCESS</button>
+          <button className={`choiceButton ${exceptions[d.id]?.outcome === 'WRONG_PACKAGE' ? 'selected' : ''}`} onClick={() => setException(d.id, 'WRONG_PACKAGE')}>WRONG PACKAGE</button>
+          <button className={`choiceButton ${exceptions[d.id]?.outcome === 'OTHER' ? 'selected' : ''}`} onClick={() => setException(d.id, 'OTHER')}>OTHER</button>
         </div>}
       </div>)}
       <button className="btn" disabled={unaccounted.length > 0} onClick={() => deliveredIds.length ? setStep('signature') : setStep('confirm')}>CONTINUE</button>
@@ -487,7 +490,7 @@ export default function Driver() {
       <input className="input" value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="Recipient name" autoComplete="off" />
       <div className="relationshipGrid">
         {([
-          ['SELF','SELF'], ['CAREGIVER','CAREGIVER'], ['FACILITY_STAFF','STAFF'], ['PARENT','PARENT'], ['CHILD','CHILD'], ['OTHER','OTHER']
+          ['SELF','SELF'], ['CAREGIVER','CAREGIVER'], ['FACILITY_STAFF','STAFF'], ['PARENT','PARENT'], ['SIBLING','SIBLING'], ['CHILD','CHILD'], ['OTHER','OTHER']
         ] as [Relationship,string][]).map(([value,label]) => <button key={value} className={`relationButton ${relationship === value ? 'selected' : ''}`} onClick={() => setRelationship(value)}>{label}</button>)}
       </div>
       <div className="fieldLabel signatureLabel">SIGN BELOW</div>
