@@ -1,6 +1,6 @@
-# Delivery Platform v1.0
+# PWA Pharmacy Delivery v1.1
 
-Standalone pharmacy delivery / proof-of-delivery system. It remains intentionally separate from Pharmacy Swisskit so Swisskit can integrate later through API/webhooks.
+PWA Pharmacy Delivery is a standalone pharmacy delivery / proof-of-delivery system. It remains intentionally separate from Pharmacy Swisskit so Swisskit can integrate later through API/webhooks.
 
 ## Current capabilities
 
@@ -65,7 +65,7 @@ The agent uploads to `/api/ingest/pdf` with source `PRINT_AGENT`. The API reject
 
 Open `/setup` with an empty database to create the first organization and `SUPER_ADMIN` account.
 
-If `BOOTSTRAP_KEY` is configured on the API, the matching key is required during bootstrap.
+The database credential is generated automatically on first install. Bootstrap is available only while the user table is empty; after the first admin is created, bootstrap is permanently rejected.
 
 ### Dispatcher/admin login
 
@@ -117,7 +117,6 @@ Typical environment variables:
 ```text
 DATABASE_URL=postgresql://...
 API_PORT=8787
-BOOTSTRAP_KEY=<optional bootstrap key>
 USER_SESSION_HOURS=12
 DEVICE_TOKEN_DAYS=180
 DEV_AUTH_BYPASS=false
@@ -135,7 +134,7 @@ npm run dev
 
 ## Production rollout gate
 
-Core application development for the v1.0 pilot is complete. Before using real patient data, validate the environment:
+Core application development for the v1.1 pilot is complete. Before using real patient data, validate the environment:
 
 - install the Windows virtual-printer EXE on the actual pharmacy PC;
 - print multiple back-to-back receipts from the exact pharmacy application;
