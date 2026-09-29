@@ -75,7 +75,7 @@ async function handle(filePath: string) {
   }
 }
 
-console.log('Delivery Print Agent v0.7');
+console.log('Delivery Print Agent v1.0');
 console.log(`Watching: ${watchDir}`);
 console.log(`API: ${apiBase}`);
 console.log('Drop/print-generated PDFs into this folder. Successful jobs are archived automatically.');
