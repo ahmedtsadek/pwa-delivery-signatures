@@ -33,6 +33,13 @@ type TextItem = { str: string; transform: number[]; width?: number };
 
 type Row = { y: number; items: Array<{ x: number; text: string }> };
 
+type AddressParts = {
+  address1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+};
+
 function clean(value?: string | null) {
   return (value || '').replace(/\s+/g, ' ').trim();
 }
@@ -44,7 +51,7 @@ function normalizeDriver(raw?: string) {
   return (parts.at(-1) || value).replace(/[^A-Za-z0-9_-]/g, '').toUpperCase();
 }
 
-function parseCityStateZip(line?: string) {
+function parseCityStateZip(line?: string): AddressParts {
   if (!line) return {};
   const m = clean(line).match(/^(.+?)\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i);
   if (!m) return {};
@@ -75,7 +82,7 @@ function rowText(row: Row) {
   return clean(row.items.map(i => i.text).join(' '));
 }
 
-function extractAddressFromRows(rows: Row[]) {
+function extractAddressFromRows(rows: Row[]): AddressParts {
   const deliveredRowIndex = rows.findIndex(r => /Delivered\s+To\s*:/i.test(rowText(r)));
   if (deliveredRowIndex < 0) return {};
 
