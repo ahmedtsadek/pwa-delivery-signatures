@@ -147,3 +147,15 @@ npm run dev
 The repository now includes production Dockerfiles and a CasaOS-ready Compose stack. The default external port is `8677`; persistent data defaults to `/DATA/AppData/pwa-delivery-signatures`.
 
 See [`CASAOS.md`](./CASAOS.md) for installation, first-time setup, reverse-proxy, persistence, and update instructions.
+
+
+## Windows virtual printer
+
+The repository now includes the Windows pharmacy-PC print bridge under
+`tools/windows-virtual-printer`.
+
+It can be built locally with `build_exe.bat`, or through the included GitHub Actions
+workflow. The installer lets each pharmacy choose its printer name and pair the PC with
+an organization-scoped Print Agent token.
+
+See [tools/windows-virtual-printer/README.md](tools/windows-virtual-printer/README.md).

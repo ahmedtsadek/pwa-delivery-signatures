@@ -1,4 +1,4 @@
-# Development Status — v0.7
+# Development Status — v0.8
 
 ## Completed through v0.6
 
@@ -88,3 +88,39 @@ Validation in the packaging environment:
 - TypeScript/TSX syntax parsing completed successfully with TypeScript 5.8.3 `--noCheck`.
 - Full dependency-backed npm build could not complete in the packaging environment because dependency installation exceeded the available execution window.
 - Docker runtime launch could not be performed because Docker is not installed in the packaging environment.
+
+
+## Added in v0.8
+
+### Native Windows virtual-printer installer
+
+- Added `tools/windows-virtual-printer/delivery_virtual_printer.py`.
+- GUI allows the pharmacy to configure:
+  - virtual printer name
+  - Delivery Platform URL
+  - organization ID
+  - Print Agent token
+  - Start with Windows
+  - start immediately after install/update
+- Creates a Windows printer queue backed by the built-in `Microsoft Print To PDF` driver.
+- Uses a silent local spool-file port, then moves each completed PDF into a unique pending file.
+- Upload contract is aligned with `POST /api/ingest/pdf` and the existing scoped Print Agent credential model.
+- Failed uploads remain queued and retry automatically.
+- Successful uploads are retained locally in an archive folder.
+- Print Agent token is protected on disk with Windows DPAPI instead of being stored as clear text.
+- Installer can remove the printer and startup task while preserving the local receipt archive.
+
+### EXE build automation
+
+- Added `tools/windows-virtual-printer/build_exe.bat` for local PyInstaller builds.
+- Added GitHub Actions workflow `.github/workflows/build-windows-printer.yml`.
+- The workflow builds `DeliveryPrinterInstaller.exe` on Windows and publishes it as a workflow artifact.
+- Workflow can be started manually and also runs when virtual-printer files change.
+
+## v0.8 validation still required
+
+1. Build the EXE in GitHub Actions and confirm the artifact launches on Windows 10/11.
+2. Test repeated back-to-back print jobs from the actual pharmacy software.
+3. Confirm the Microsoft Print To PDF local-file port behaves silently on the target Windows machines.
+4. Run an end-to-end real receipt test:
+   `Pharmacy software → virtual printer → API → parsed delivery → driver PWA → barcode → signature → signed PDF`.
