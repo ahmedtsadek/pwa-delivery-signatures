@@ -21,13 +21,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
 
       - name: Install dependencies
         run: npm install
 
       - name: Generate Prisma client
         run: npm run prisma:generate -w @delivery/api
+
+      - name: API synthetic receipt smoke test
+        run: npm run test:smoke -w @delivery/api
 
       - name: Build API
         run: npm run build -w @delivery/api

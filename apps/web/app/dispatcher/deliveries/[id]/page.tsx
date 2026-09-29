@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { userAuthFetch, userToken } from '../../../../lib/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
@@ -45,12 +46,15 @@ async function openProtectedDocument(deliveryId: string, kind: 'original'|'signe
   window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-export default function DeliveryDetailPage({ params }: { params: { id: string } }) {
+export default function DeliveryDetailPage() {
+  const params = useParams<{ id: string }>();
+  const deliveryId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [organizationId, setOrganizationId] = useState('');
   const [delivery, setDelivery] = useState<DeliveryDetail | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!deliveryId) return;
     if (!userToken()) { window.location.replace('/login'); return; }
     const qs = new URLSearchParams(window.location.search);
     const id = qs.get('organizationId') || localStorage.getItem('deliveryOrganizationId') || '';
@@ -58,7 +62,7 @@ export default function DeliveryDetailPage({ params }: { params: { id: string } 
 
     const load = async () => {
       try {
-        const response = await userAuthFetch(`${API}/api/deliveries/${params.id}`, { cache:'no-store' });
+        const response = await userAuthFetch(`${API}/api/deliveries/${deliveryId}`, { cache:'no-store' });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Could not load delivery');
         setDelivery(payload.delivery);
@@ -67,7 +71,7 @@ export default function DeliveryDetailPage({ params }: { params: { id: string } 
       }
     };
     load();
-  }, [params.id]);
+  }, [deliveryId]);
 
   if (error) return <main className="shell"><div className="card errorBox">{error}</div></main>;
   if (!delivery) return <main className="shell"><div className="card"><div className="big">Loading…</div></div></main>;
