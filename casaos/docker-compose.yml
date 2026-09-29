@@ -1,0 +1,94 @@
+name: pwa-delivery-signatures
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: delivery
+      POSTGRES_PASSWORD: delivery-local-only-change-me
+      POSTGRES_DB: delivery
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/postgres
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U delivery -d delivery"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/ahmedtsadek/pwa-delivery-signatures-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://delivery:delivery-local-only-change-me@postgres:5432/delivery
+      API_PORT: "8787"
+      STORAGE_ROOT: /data/storage
+      BOOTSTRAP_KEY: ""
+      USER_SESSION_HOURS: "12"
+      DEVICE_TOKEN_DAYS: "180"
+      DEV_AUTH_BYPASS: "false"
+      ROUTER_BASE_URL: ""
+      GEOCODER_BASE_URL: ""
+      CORS_ORIGINS: ""
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/storage
+        target: /data/storage
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8787/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  web:
+    image: ghcr.io/ahmedtsadek/pwa-delivery-signatures-web:latest
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - target: 3000
+        published: "8677"
+        protocol: tcp
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+
+x-casaos:
+  id: com.tee4it.delivery-platform
+  main: web
+  index: /
+  port_map: "8677"
+  scheme: http
+  icon: https://raw.githubusercontent.com/ahmedtsadek/pwa-delivery-signatures/main/apps/web/public/icon.svg
+  title:
+    en_US: Delivery Platform
+  tagline:
+    en_US: Pharmacy delivery routing, barcode verification and proof of delivery.
+  description:
+    en_US: >-
+      Standalone pharmacy delivery platform with dispatcher dashboard, driver PWA,
+      PDF receipt ingestion, route optimization, barcode verification, signatures,
+      signed receipt generation, returns and audit history.
+  author: Ahmed T. Sadek
+  developer: TEE4IT
+  category: Productivity
+  architectures:
+    - amd64
+    - arm64
+  version: "1.0.0"
+  update_at: "2026-09-29"
+  release_notes:
+    en_US: First CasaOS one-click release.
+  repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
+  docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
+  tips:
+    before_install:
+      en_US: >-
+        After installation, open /setup immediately and create the first admin.
+        The database is private to this Docker network. For production, deploy
+        behind HTTPS before using driver camera/barcode features or real patient data.
