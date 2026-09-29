@@ -16,7 +16,21 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024, files: 1 }
 });
 
-app.use(cors());
+const corsOrigins = String(process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(value => value.trim())
+  .filter(Boolean);
+
+app.disable('x-powered-by');
+app.use(cors({
+  origin(origin, callback) {
+    // Native/desktop agents do not send an Origin header. Browser origins can
+    // be restricted in production with CORS_ORIGINS=https://delivery.example.com.
+    if (!origin || corsOrigins.length === 0 || corsOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS'));
+  },
+  credentials: false
+}));
 app.use(express.json({ limit: '4mb' }));
 
 const STOP_SERVICE_MINUTES = 5;
