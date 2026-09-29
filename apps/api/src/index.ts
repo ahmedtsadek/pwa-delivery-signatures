@@ -153,7 +153,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'delivery-api', version: '0.7.0' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'delivery-api', version: '0.8.0' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
@@ -1157,6 +1157,170 @@ app.post('/api/route-stops/:id/complete', async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Failed to complete stop', detail: error?.message || String(error) });
   }
+});
+
+
+app.get('/api/organizations/:organizationId/deliveries', async (req, res) => {
+  const actor = await requireOrganizationUser(req, res, req.params.organizationId);
+  if (!actor) return;
+
+  const status = typeof req.query.status === 'string' && req.query.status ? req.query.status : undefined;
+  const takeRaw = Number(req.query.take || 100);
+  const take = Math.max(1, Math.min(Number.isFinite(takeRaw) ? takeRaw : 100, 250));
+
+  const deliveries = await prisma.delivery.findMany({
+    where: {
+      organizationId: req.params.organizationId,
+      ...(status ? { status: status as DeliveryStatus } : {})
+    },
+    include: {
+      driver: { select: { id: true, displayName: true } },
+      routeStop: { select: { id: true, sequence: true, routeId: true, facilityName: true } },
+      receiptImports: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { id: true, source: true, status: true, createdAt: true, template: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+    take
+  });
+
+  res.json({
+    deliveries: deliveries.map(d => ({
+      ...d,
+      hasOriginalPdf: !!d.originalPdfObjectKey,
+      hasSignedPdf: !!d.signedPdfObjectKey,
+      hasSignature: !!d.signatureObjectKey,
+      originalPdfObjectKey: undefined,
+      signedPdfObjectKey: undefined,
+      signatureObjectKey: undefined
+    }))
+  });
+});
+
+app.get('/api/deliveries/:deliveryId', async (req, res) => {
+  const delivery = await prisma.delivery.findUnique({
+    where: { id: req.params.deliveryId },
+    include: {
+      driver: { select: { id: true, displayName: true, phone: true } },
+      routeStop: {
+        include: {
+          route: { select: { id: true, routeDate: true, startedAt: true, completedAt: true } }
+        }
+      },
+      receiptImports: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, source: true, originalFilename: true, template: true, pageCount: true,
+          logNumber: true, parsedDriverRaw: true, parsedDriverAlias: true, parsedAddress: true,
+          status: true, createdAt: true
+        }
+      },
+      scans: { orderBy: { scannedAt: 'asc' } },
+      audits: { orderBy: { createdAt: 'asc' } }
+    }
+  });
+  if (!delivery) return res.status(404).json({ error: 'Delivery not found' });
+
+  const actor = await requireOrganizationUser(req, res, delivery.organizationId);
+  if (!actor) return;
+
+  res.json({
+    delivery: {
+      ...delivery,
+      hasOriginalPdf: !!delivery.originalPdfObjectKey,
+      hasSignedPdf: !!delivery.signedPdfObjectKey,
+      hasSignature: !!delivery.signatureObjectKey,
+      originalPdfObjectKey: undefined,
+      signedPdfObjectKey: undefined,
+      signatureObjectKey: undefined
+    }
+  });
+});
+
+app.get('/api/deliveries/:deliveryId/document/:kind', async (req, res) => {
+  const delivery = await prisma.delivery.findUnique({ where: { id: req.params.deliveryId } });
+  if (!delivery) return res.status(404).json({ error: 'Delivery not found' });
+
+  const actor = await requireOrganizationUser(req, res, delivery.organizationId);
+  if (!actor) return;
+
+  const kind = String(req.params.kind || '').toLowerCase();
+  let objectKey: string | null | undefined;
+  let contentType = 'application/pdf';
+  let filename = `delivery-${delivery.externalLogNumber || delivery.id}.pdf`;
+
+  if (kind === 'original') {
+    objectKey = delivery.originalPdfObjectKey;
+    filename = `original-${delivery.externalLogNumber || delivery.id}.pdf`;
+  } else if (kind === 'signed') {
+    objectKey = delivery.signedPdfObjectKey;
+    filename = `signed-${delivery.externalLogNumber || delivery.id}.pdf`;
+  } else if (kind === 'signature') {
+    objectKey = delivery.signatureObjectKey;
+    contentType = 'image/png';
+    filename = `signature-${delivery.externalLogNumber || delivery.id}.png`;
+  } else {
+    return res.status(400).json({ error: 'Document kind must be original, signed, or signature' });
+  }
+
+  if (!objectKey) return res.status(404).json({ error: 'Requested document is not available' });
+
+  try {
+    const bytes = await readObject(objectKey);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${filename.replace(/"/g, '')}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(bytes);
+  } catch (error: any) {
+    console.error(error);
+    res.status(404).json({ error: 'Stored document could not be read' });
+  }
+});
+
+app.get('/api/organizations/:organizationId/pilot-readiness', async (req, res) => {
+  const actor = await requireOrganizationUser(req, res, req.params.organizationId);
+  if (!actor) return;
+
+  const organizationId = req.params.organizationId;
+  const [total, unassigned, needsReview, delivered, signed, exceptions, activeAgents, activeDrivers] = await Promise.all([
+    prisma.delivery.count({ where: { organizationId } }),
+    prisma.delivery.count({ where: { organizationId, driverId: null } }),
+    prisma.delivery.count({
+      where: {
+        organizationId,
+        OR: [
+          { patientName: 'Needs Review' },
+          { address1: 'Needs Review' },
+          { city: 'Needs Review' }
+        ]
+      }
+    }),
+    prisma.delivery.count({ where: { organizationId, status: DeliveryStatus.DELIVERED } }),
+    prisma.delivery.count({ where: { organizationId, signedPdfObjectKey: { not: null } } }),
+    prisma.delivery.count({
+      where: {
+        organizationId,
+        status: { in: [DeliveryStatus.EXCEPTION, DeliveryStatus.RETURN_REQUIRED] }
+      }
+    }),
+    prisma.printAgentCredential.count({ where: { organizationId, active: true } }),
+    prisma.driver.count({ where: { organizationId, active: true } })
+  ]);
+
+  res.json({
+    organizationId,
+    counts: { total, unassigned, needsReview, delivered, signed, exceptions, activeAgents, activeDrivers },
+    checks: {
+      printAgentPaired: activeAgents > 0,
+      driverConfigured: activeDrivers > 0,
+      importedReceiptAvailable: total > 0,
+      noUnassignedReceipts: total > 0 && unassigned === 0,
+      noParserReviewItems: total > 0 && needsReview === 0,
+      signedPdfFlowObserved: signed > 0
+    }
+  });
 });
 
 
