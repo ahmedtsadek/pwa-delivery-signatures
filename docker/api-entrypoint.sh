@@ -1,12 +1,9 @@
 #!/bin/sh
 set -eu
 
-# CasaOS/App Store installs keep the database password in a persistent file
-# shared only by PostgreSQL and the API container. Local/developer installs may
-# still provide DATABASE_URL directly.
 if [ -n "${DB_PASSWORD_FILE:-}" ]; then
   if [ ! -s "$DB_PASSWORD_FILE" ]; then
-    echo "Database password file is missing or empty: $DB_PASSWORD_FILE" >&2
+    echo "Database credential file is missing or empty: $DB_PASSWORD_FILE" >&2
     exit 1
   fi
   DB_PASSWORD="$(cat "$DB_PASSWORD_FILE")"
