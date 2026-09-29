@@ -22,7 +22,7 @@ export function estimatedDriveMinutes(a: GeoPoint, b: GeoPoint) {
 }
 
 export async function roadDurationMatrix(points: GeoPoint[]): Promise<number[][] | null> {
-  const base = (process.env.ROUTING_BASE_URL || '').replace(/\/$/, '');
+  const base = (process.env.ROUTER_BASE_URL || process.env.ROUTING_BASE_URL || '').replace(/\/$/, '');
   if (!base || points.length < 2) return null;
   const coords = points.map(p => `${p.longitude},${p.latitude}`).join(';');
   const response = await fetch(`${base}/table/v1/driving/${coords}?annotations=duration`);
@@ -62,7 +62,7 @@ export async function geocodeAddress(address: string): Promise<GeoPoint | null> 
   const base = (process.env.GEOCODER_BASE_URL || '').replace(/\/$/, '');
   if (!base) return null;
   const url = `${base}/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`;
-  const response = await fetch(url, { headers: { 'user-agent': process.env.GEOCODER_USER_AGENT || 'delivery-platform/0.4' } });
+  const response = await fetch(url, { headers: { 'user-agent': process.env.GEOCODER_USER_AGENT || 'delivery-platform/1.0' } });
   if (!response.ok) throw new Error(`Geocoder failed: ${response.status}`);
   const payload: any[] = await response.json();
   if (!payload?.length) return null;
