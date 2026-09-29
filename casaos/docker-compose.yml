@@ -10,12 +10,8 @@ services:
       POSTGRES_DB: delivery
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/postgres
+        source: /DATA/AppData/com.tee4it.delivery-platform/postgres
         target: /var/lib/postgresql/data
-    networks:
-      delivery_internal:
-        aliases:
-          - postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U delivery -d delivery"]
       interval: 10s
@@ -28,6 +24,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    links:
+      - postgres:postgres
     environment:
       DATABASE_URL: postgresql://delivery:delivery-local-only-change-me@postgres:5432/delivery
       API_PORT: "8787"
@@ -41,10 +39,8 @@ services:
       CORS_ORIGINS: ""
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/storage
+        source: /DATA/AppData/com.tee4it.delivery-platform/storage
         target: /data/storage
-    networks:
-      - delivery_internal
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8787/health"]
       interval: 15s
@@ -57,19 +53,14 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    links:
+      - api:api
     ports:
       - target: 3000
         published: "8677"
         protocol: tcp
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
-    networks:
-      - delivery_internal
-
-networks:
-  delivery_internal:
-    name: pwa-delivery-signatures-internal
-    driver: bridge
 
 x-casaos:
   id: com.tee4it.delivery-platform
@@ -93,10 +84,10 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "1.0.1"
+  version: "1.0.2"
   update_at: "2026-09-29"
   release_notes:
-    en_US: Fix CasaOS internal service networking and database hostname resolution.
+    en_US: Improve CasaOS compatibility using fixed AppData paths and service links on the default bridge network.
   repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
   docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
   tips:
