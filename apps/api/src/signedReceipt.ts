@@ -113,7 +113,6 @@ function fitText(
     preferredSize: number;
     minSize?: number;
     maxChars?: number;
-    bold?: boolean;
   }
 ) {
   const clean = text.replace(/\s+/g, ' ').trim();
@@ -128,10 +127,10 @@ function fitText(
   }
 
   if (font.widthOfTextAtSize(value, size) > options.maxWidth) {
-    while (value.length > 1 && font.widthOfTextAtSize(value + '…', size) > options.maxWidth) {
+    while (value.length > 1 && font.widthOfTextAtSize(value + '...', size) > options.maxWidth) {
       value = value.slice(0, -1);
     }
-    if (value !== clean) value += '…';
+    if (value !== clean) value += '...';
   }
 
   page.drawText(value, {
