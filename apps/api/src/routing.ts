@@ -69,3 +69,54 @@ export async function geocodeAddress(address: string): Promise<GeoPoint | null> 
   const latitude = Number(payload[0].lat), longitude = Number(payload[0].lon);
   return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : null;
 }
+
+
+function matrixPathMinutes(order: RouteCandidate[], candidates: RouteCandidate[], matrix: number[][]) {
+  let total = 0;
+  let previousMatrixIndex = 0;
+  for (const stop of order) {
+    const candidateIndex = candidates.findIndex(c => c.id === stop.id);
+    if (candidateIndex < 0) return Number.POSITIVE_INFINITY;
+    const matrixIndex = candidateIndex + 1;
+    total += matrix[previousMatrixIndex]?.[matrixIndex] ?? Number.POSITIVE_INFINITY;
+    previousMatrixIndex = matrixIndex;
+  }
+  return total;
+}
+
+// Improve the road-matrix nearest-neighbor result with a bounded 2-opt pass.
+// This is an open route (pharmacy origin -> final stop), so no return leg is
+// included unless dispatch explicitly creates one as a stop.
+export function improveRoadOrder(
+  initial: RouteCandidate[],
+  candidates: RouteCandidate[],
+  matrix?: number[][] | null,
+  maxPasses = 5
+) {
+  if (!matrix || initial.length < 4) return initial;
+
+  let best = [...initial];
+  let bestCost = matrixPathMinutes(best, candidates, matrix);
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let improved = false;
+    for (let i = 0; i < best.length - 1; i++) {
+      for (let k = i + 1; k < best.length; k++) {
+        const candidate = [
+          ...best.slice(0, i),
+          ...best.slice(i, k + 1).reverse(),
+          ...best.slice(k + 1)
+        ];
+        const cost = matrixPathMinutes(candidate, candidates, matrix);
+        if (cost + 0.01 < bestCost) {
+          best = candidate;
+          bestCost = cost;
+          improved = true;
+        }
+      }
+    }
+    if (!improved) break;
+  }
+
+  return best;
+}
