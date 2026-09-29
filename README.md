@@ -1,4 +1,4 @@
-# Delivery Platform v0.7
+# Delivery Platform v1.0
 
 Standalone pharmacy delivery / proof-of-delivery system. It remains intentionally separate from Pharmacy Swisskit so Swisskit can integrate later through API/webhooks.
 
@@ -22,7 +22,7 @@ Standalone pharmacy delivery / proof-of-delivery system. It remains intentionall
 - Offline driver route cache and ordered action queue.
 - Driver phone one-time enrollment.
 - Staff authentication and roles.
-- **v0.7:** scoped Print Agent credentials, staff-user management, dispatcher alerts and safer offline conflict behavior.
+- **v1.0:** Windows virtual printer, dispatcher proof views, pilot-readiness checks, CI integration tests, backups and production hardening.
 
 ## Driver workflow
 
@@ -133,14 +133,19 @@ npm run prisma:migrate -w @delivery/api
 npm run dev
 ```
 
-## Still outstanding before production rollout
+## Production rollout gate
 
-- Native Windows virtual-printer driver/installer.
-- Full dependency-backed build and end-to-end test run.
-- Production object storage and backup/retention plan.
-- HTTPS/reverse-proxy hardening.
-- Browser/device testing for barcode camera support.
-- Optional native/web push notifications.
+Core application development for the v1.0 pilot is complete. Before using real patient data, validate the environment:
+
+- install the Windows virtual-printer EXE on the actual pharmacy PC;
+- print multiple back-to-back receipts from the exact pharmacy application;
+- verify camera/barcode behavior on the actual driver phones;
+- verify signed-field alignment on a real receipt printout;
+- deploy behind HTTPS and set the production public origin;
+- run a backup and a test restore;
+- review the pharmacy's hosting/vendor/privacy requirements.
+
+See [RELEASE.md](./RELEASE.md) and [SECURITY.md](./SECURITY.md).
 
 ## CasaOS / Docker deployment
 

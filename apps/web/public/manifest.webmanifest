@@ -1,9 +1,18 @@
 {
-  "name":"Delivery Platform Driver",
-  "short_name":"Delivery",
-  "start_url":"/driver",
-  "display":"standalone",
-  "background_color":"#f3f4f6",
-  "theme_color":"#111827",
-  "icons":[]
+  "name": "Delivery Platform Driver",
+  "short_name": "Delivery",
+  "description": "Pharmacy delivery route and proof-of-delivery app",
+  "start_url": "/driver",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

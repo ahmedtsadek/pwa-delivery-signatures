@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { parseReceiptPdf } from './receiptParser.js';
 import { savePdf, savePng, readObject } from './storage.js';
 import { stampSaintMaryReceipt } from './signedReceipt.js';
-import { estimatedDriveMinutes, geocodeAddress, nearestNeighborOrder, roadDurationMatrix } from './routing.js';
+import { estimatedDriveMinutes, geocodeAddress, nearestNeighborOrder, improveRoadOrder, roadDurationMatrix } from './routing.js';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -16,7 +16,21 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024, files: 1 }
 });
 
-app.use(cors());
+const corsOrigins = String(process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(value => value.trim())
+  .filter(Boolean);
+
+app.disable('x-powered-by');
+app.use(cors({
+  origin(origin, callback) {
+    // Native/desktop agents do not send an Origin header. Browser origins can
+    // be restricted in production with CORS_ORIGINS=https://delivery.example.com.
+    if (!origin || corsOrigins.length === 0 || corsOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS'));
+  },
+  credentials: false
+}));
 app.use(express.json({ limit: '4mb' }));
 
 const STOP_SERVICE_MINUTES = 5;
@@ -153,7 +167,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'delivery-api', version: '0.8.0' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'delivery-api', version: '1.0.0' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
@@ -521,7 +535,8 @@ app.post('/api/drivers/:driverId/routes/optimize', async (req, res) => {
     const candidates = stopDrafts.map(s => ({ id: s.id, latitude: s.latitude as number, longitude: s.longitude as number }));
     let matrix: number[][] | null = null;
     try { matrix = await roadDurationMatrix([parsed.data.origin, ...candidates]); } catch (e) { console.warn('Road matrix unavailable, using local fallback', e); }
-    const ordered = nearestNeighborOrder(candidates, parsed.data.origin, matrix);
+    const nearest = nearestNeighborOrder(candidates, parsed.data.origin, matrix);
+    const ordered = improveRoadOrder(nearest, candidates, matrix);
     const byId = new Map(stopDrafts.map(s => [s.id, s]));
     const orderedDrafts = ordered.map(o => byId.get(o.id)!);
 
@@ -561,7 +576,7 @@ app.post('/api/drivers/:driverId/routes/optimize', async (req, res) => {
       include: { driver: true, stops: { include: { deliveries: true }, orderBy: { sequence: 'asc' } } }
     });
     await prisma.delivery.updateMany({ where: { id: { in: deliveries.map(d => d.id) } }, data: { status: DeliveryStatus.ASSIGNED } });
-    res.status(201).json({ route, eta: routeEta(route), routingMode: matrix ? 'ROAD_MATRIX' : 'LOCAL_DISTANCE_FALLBACK' });
+    res.status(201).json({ route, eta: routeEta(route), routingMode: matrix ? 'ROAD_MATRIX_2OPT' : 'LOCAL_DISTANCE_FALLBACK' });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: 'Failed to optimize route', detail: error?.message || String(error) });
