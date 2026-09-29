@@ -90,7 +90,7 @@ x-casaos:
   index: /
   port_map: "8677"
   scheme: http
-  icon: https://raw.githubusercontent.com/ahmedtsadek/pwa-delivery-signatures/main/apps/web/public/icon.svg
+  icon: https://raw.githubusercontent.com/ahmedtsadek/pwa-delivery-signatures/main/apps/web/public/icons/icon-192.png
   title:
     en_US: PWA Pharmacy Delivery
   tagline:
@@ -106,10 +106,10 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "1.1.0"
+  version: "1.1.1"
   update_at: "2026-09-29"
   release_notes:
-    en_US: Automatic database credentials, simpler first-time setup, new PWA Pharmacy Delivery branding and icon.
+    en_US: Uses the new PWA Pharmacy Delivery icon across CasaOS and installed phone PWAs.
   repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
   docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
   tips:
