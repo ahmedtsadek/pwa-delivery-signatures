@@ -707,12 +707,12 @@ app.post('/api/deliveries/:id/outcome', async (req, res) => {
   if (!actor) return;
   const outcome = parsed.data.outcome as DeliveryOutcome;
   const isDelivered = outcome === DeliveryOutcome.DELIVERED;
-  const needsReturn = [
+  const needsReturn = ([
     DeliveryOutcome.RECIPIENT_NOT_AVAILABLE,
     DeliveryOutcome.REFUSED,
     DeliveryOutcome.UNABLE_TO_ACCESS,
     DeliveryOutcome.WRONG_PACKAGE
-  ].includes(outcome);
+  ] as DeliveryOutcome[]).includes(outcome);
 
   const delivery = await prisma.delivery.update({
     where: { id: req.params.id },
@@ -1105,12 +1105,12 @@ app.post('/api/route-stops/:id/complete', async (req, res) => {
     for (const delivery of stop.deliveries.filter(d => exceptionMap.has(d.id))) {
       const exception = exceptionMap.get(delivery.id)!;
       const outcome = exception.outcome as DeliveryOutcome;
-      const needsReturn = [
+      const needsReturn = ([
         DeliveryOutcome.RECIPIENT_NOT_AVAILABLE,
         DeliveryOutcome.REFUSED,
         DeliveryOutcome.UNABLE_TO_ACCESS,
         DeliveryOutcome.WRONG_PACKAGE
-      ].includes(outcome);
+      ] as DeliveryOutcome[]).includes(outcome);
       const updated = await prisma.delivery.update({
         where: { id: delivery.id },
         data: {
