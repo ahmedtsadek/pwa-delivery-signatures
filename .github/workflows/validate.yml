@@ -9,9 +9,26 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: delivery
+          POSTGRES_PASSWORD: delivery
+          POSTGRES_DB: delivery
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U delivery -d delivery"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DATABASE_URL: postgresql://delivery:delivery@localhost:5432/delivery
       NEXT_PUBLIC_API_URL: ""
+      BOOTSTRAP_KEY: test-bootstrap
+      API_PORT: 8787
+      STORAGE_ROOT: /tmp/delivery-storage
 
     steps:
       - name: Checkout
@@ -28,11 +45,28 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate -w @delivery/api
 
+      - name: Synchronize CI database
+        run: npx prisma db push --schema apps/api/prisma/schema.prisma
+
       - name: API synthetic receipt smoke test
         run: npm run test:smoke -w @delivery/api
 
       - name: Build API
         run: npm run build -w @delivery/api
+
+      - name: Start API for integration test
+        run: |
+          node apps/api/dist/index.js >/tmp/delivery-api.log 2>&1 &
+          echo $! >/tmp/delivery-api.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8787/health >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/delivery-api.log
+          exit 1
+
+      - name: API ingestion integration smoke test
+        run: npm run test:integration -w @delivery/api
 
       - name: Build web
         run: npm run build -w @delivery/web
