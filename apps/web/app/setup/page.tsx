@@ -10,7 +10,6 @@ export default function SetupPage(){
   const [password,setPassword]=useState('');
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
-
   const setup=async()=>{
     setBusy(true);setMessage('');
     try{
@@ -21,17 +20,16 @@ export default function SetupPage(){
       });
       const text=await r.text();
       let j:any={};
-      try{ j=text?JSON.parse(text):{}; }catch{ j={ error: text || `Setup failed (HTTP ${r.status})` }; }
+      try{ j=text?JSON.parse(text):{}; }catch{ j={error:text||`Setup failed (HTTP ${r.status})`}; }
       if(!r.ok) throw new Error(typeof j.error==='string'?j.error:(j.detail||`Setup failed (HTTP ${r.status})`));
       setMessage('✓ Admin created. Sign in to continue.');
       setTimeout(()=>window.location.href='/login',700);
     }catch(e:any){setMessage(e.message||'Setup failed');}
     setBusy(false);
   };
-
   return <main className="shell"><div className="card focusCard">
     <div className="eyebrow">FIRST-TIME SETUP</div><div className="big">Create pharmacy admin</div>
-    <p className="muted">PWA Pharmacy Delivery generated its database credentials automatically. Just create your first administrator.</p>
+    <p className="muted">PWA Pharmacy Delivery handles its installation credentials automatically. Create your first administrator below.</p>
     <label className="fieldLabel">Pharmacy / organization</label><input className="input" value={organizationName} onChange={e=>setOrganizationName(e.target.value)} />
     <label className="fieldLabel">Your name</label><input className="input" value={name} onChange={e=>setName(e.target.value)} />
     <label className="fieldLabel">Email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
