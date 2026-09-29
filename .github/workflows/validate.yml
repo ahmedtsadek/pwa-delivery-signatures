@@ -73,3 +73,8 @@ jobs:
 
       - name: Build legacy print agent
         run: npm run build -w @delivery/print-agent
+
+      - name: Validate CasaOS one-click compose
+        env:
+          AppID: com.tee4it.delivery-platform
+        run: docker compose -f casaos/docker-compose.yml config -q
