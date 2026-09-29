@@ -9,3 +9,15 @@ node_modules/
 **/node_modules/
 **/.next/
 storage/
+
+# Never commit pharmacy receipt / PHI working files
+local-receipts/
+test-receipts/
+receipts/
+*.receipt.pdf
+*.signed.pdf
+
+# Windows virtual-printer build output
+tools/windows-virtual-printer/build/
+tools/windows-virtual-printer/dist/
+*.spec
