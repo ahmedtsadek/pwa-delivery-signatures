@@ -1,8 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#111827"/>
-  <path d="M116 154h196c20 0 36 16 36 36v24h34c10 0 19 5 25 13l34 46c6 8 9 17 9 27v66h-30a54 54 0 0 1-106 0H220a54 54 0 0 1-106 0H84V186c0-18 14-32 32-32Z" fill="#fff"/>
-  <path d="M348 238v66h78v-4c0-4-1-8-4-12l-33-43c-3-5-9-7-14-7h-27Z" fill="#111827"/>
-  <circle cx="167" cy="365" r="27" fill="#111827"/>
-  <circle cx="367" cy="365" r="27" fill="#111827"/>
-  <path d="M150 230h132M150 270h96" stroke="#111827" stroke-width="24" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">PWA Pharmacy Delivery</title>
+  <desc id="desc">Pharmacy delivery bag, route and location pin on a blue gradient icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="70" y1="40" x2="450" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B3D91"/>
+      <stop offset=".48" stop-color="#087CC4"/>
+      <stop offset="1" stop-color="#00C7D9"/>
+    </linearGradient>
+    <linearGradient id="bag" x1="170" y1="175" x2="335" y2="390" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DDEBFF"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="220" y1="180" x2="300" y2="305" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A7DE8"/>
+      <stop offset="1" stop-color="#0056C7"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="15" stdDeviation="16" flood-color="#031D4F" flood-opacity=".35"/>
+    </filter>
+  </defs>
+
+  <rect x="20" y="20" width="472" height="472" rx="118" fill="url(#bg)"/>
+  <path d="M67 354c54-54 122-78 201-72 68 6 111 31 176 1" fill="none" stroke="#70F2FF" stroke-width="18" stroke-linecap="round" opacity=".9"/>
+  <path d="M88 390c64-47 134-63 207-49 43 8 79 25 118 22" fill="none" stroke="#9BEFFF" stroke-width="8" stroke-linecap="round" opacity=".45"/>
+
+  <g filter="url(#shadow)">
+    <path d="M181 182h150c14 0 26 10 29 23l34 157c4 18-10 35-28 35H146c-18 0-32-17-28-35l34-157c3-13 15-23 29-23z" fill="url(#bag)"/>
+    <path d="M205 182v-18c0-29 23-52 52-52s52 23 52 52v18" fill="none" stroke="#DDEBFF" stroke-width="22" stroke-linecap="round"/>
+    <rect x="213" y="225" width="86" height="86" rx="20" fill="url(#accent)"/>
+    <path d="M245 242h22v22h22v22h-22v22h-22v-22h-22v-22h22z" fill="#fff"/>
+  </g>
+
+  <g transform="translate(325 96)" filter="url(#shadow)">
+    <path d="M61 0c-34 0-61 27-61 61 0 48 61 107 61 107s61-59 61-107C122 27 95 0 61 0z" fill="#65F3F8"/>
+    <circle cx="61" cy="60" r="24" fill="#0871C6"/>
+  </g>
+
+  <g transform="translate(83 309)" filter="url(#shadow)">
+    <rect x="0" y="0" width="124" height="72" rx="20" fill="#FFFFFF"/>
+    <path d="M15 46h83c12 0 20 8 20 19v2H15z" fill="#D9E9FF"/>
+    <path d="M16 42h58V18H29c-7 0-13 5-13 12z" fill="#0A7DE8"/>
+    <path d="M74 42h34l-16-24H74z" fill="#0A7DE8"/>
+    <circle cx="35" cy="61" r="10" fill="#0C2E69"/>
+    <circle cx="96" cy="61" r="10" fill="#0C2E69"/>
+    <path d="M42 24h11v8h8v11h-8v8H42v-8h-8V32h8z" fill="#fff"/>
+  </g>
+
+  <circle cx="411" cy="351" r="10" fill="#fff" opacity=".95"/>
+  <circle cx="377" cy="332" r="6" fill="#fff" opacity=".7"/>
 </svg>
