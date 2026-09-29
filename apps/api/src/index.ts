@@ -153,7 +153,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'delivery-api', version: '0.8.0' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'delivery-api', version: '1.0.0' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
