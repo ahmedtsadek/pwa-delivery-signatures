@@ -61,8 +61,6 @@ services:
         protocol: tcp
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
-    networks:
-      - delivery_internal
 
 x-casaos:
   id: com.tee4it.delivery-platform
