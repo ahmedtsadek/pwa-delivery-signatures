@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { parseReceiptPdf } from './receiptParser.js';
 import { savePdf, savePng, readObject } from './storage.js';
 import { stampSaintMaryReceipt } from './signedReceipt.js';
-import { estimatedDriveMinutes, geocodeAddress, nearestNeighborOrder, roadDurationMatrix } from './routing.js';
+import { estimatedDriveMinutes, geocodeAddress, nearestNeighborOrder, improveRoadOrder, roadDurationMatrix } from './routing.js';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -535,7 +535,8 @@ app.post('/api/drivers/:driverId/routes/optimize', async (req, res) => {
     const candidates = stopDrafts.map(s => ({ id: s.id, latitude: s.latitude as number, longitude: s.longitude as number }));
     let matrix: number[][] | null = null;
     try { matrix = await roadDurationMatrix([parsed.data.origin, ...candidates]); } catch (e) { console.warn('Road matrix unavailable, using local fallback', e); }
-    const ordered = nearestNeighborOrder(candidates, parsed.data.origin, matrix);
+    const nearest = nearestNeighborOrder(candidates, parsed.data.origin, matrix);
+    const ordered = improveRoadOrder(nearest, candidates, matrix);
     const byId = new Map(stopDrafts.map(s => [s.id, s]));
     const orderedDrafts = ordered.map(o => byId.get(o.id)!);
 
@@ -575,7 +576,7 @@ app.post('/api/drivers/:driverId/routes/optimize', async (req, res) => {
       include: { driver: true, stops: { include: { deliveries: true }, orderBy: { sequence: 'asc' } } }
     });
     await prisma.delivery.updateMany({ where: { id: { in: deliveries.map(d => d.id) } }, data: { status: DeliveryStatus.ASSIGNED } });
-    res.status(201).json({ route, eta: routeEta(route), routingMode: matrix ? 'ROAD_MATRIX' : 'LOCAL_DISTANCE_FALLBACK' });
+    res.status(201).json({ route, eta: routeEta(route), routingMode: matrix ? 'ROAD_MATRIX_2OPT' : 'LOCAL_DISTANCE_FALLBACK' });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: 'Failed to optimize route', detail: error?.message || String(error) });
