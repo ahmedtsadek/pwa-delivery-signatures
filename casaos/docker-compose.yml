@@ -12,6 +12,10 @@ services:
       - type: bind
         source: /DATA/AppData/$AppID/postgres
         target: /var/lib/postgresql/data
+    networks:
+      delivery_internal:
+        aliases:
+          - postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U delivery -d delivery"]
       interval: 10s
@@ -39,6 +43,8 @@ services:
       - type: bind
         source: /DATA/AppData/$AppID/storage
         target: /data/storage
+    networks:
+      - delivery_internal
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8787/health"]
       interval: 15s
@@ -57,6 +63,13 @@ services:
         protocol: tcp
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
+    networks:
+      - delivery_internal
+
+networks:
+  delivery_internal:
+    name: pwa-delivery-signatures-internal
+    driver: bridge
 
 x-casaos:
   id: com.tee4it.delivery-platform
