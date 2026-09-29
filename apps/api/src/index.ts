@@ -181,12 +181,9 @@ app.post('/api/auth/bootstrap', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
     const result = await prisma.$transaction(async tx => {
-      // Serialize first-admin creation so two simultaneous setup requests cannot
-      // both observe an empty user table and create separate initial admins.
       await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(7331042026)');
       const existingUsers = await tx.user.count();
       if (existingUsers > 0) return null;
-
       const organization = await tx.organization.create({
         data: { name: parsed.data.organizationName.trim() }
       });
