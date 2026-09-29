@@ -1,0 +1,14 @@
+{
+  "name": "delivery-platform",
+  "private": true,
+  "version": "0.7.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @delivery/api & npm run dev -w @delivery/web",
+    "build": "npm run build -w @delivery/api && npm run build -w @delivery/web && npm run build -w @delivery/print-agent",
+    "dev:print-agent": "npm run dev -w @delivery/print-agent"
+  }
+}

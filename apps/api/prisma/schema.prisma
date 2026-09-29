@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  PHARMACY_ADMIN
+  DISPATCHER
+  DRIVER
+  AUDITOR
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  EXCEPTION
+  RETURN_REQUIRED
+  RETURNED
+}
+
+enum DeliveryOutcome {
+  PENDING
+  DELIVERED
+  RECIPIENT_NOT_AVAILABLE
+  REFUSED
+  PACKAGE_NOT_PROVIDED
+  UNABLE_TO_ACCESS
+  WRONG_PACKAGE
+  OTHER
+}
+
+enum Relationship {
+  SELF
+  CAREGIVER
+  PARENT
+  SIBLING
+  CHILD
+  FACILITY_STAFF
+  OTHER
+}
+
+model Organization {
+  id         String      @id @default(cuid())
+  name       String
+  users      User[]
+  drivers    Driver[]
+  facilities Facility[]
+  deliveries Delivery[]
+  routes     Route[]
+  receiptImports ReceiptImport[]
+  printAgents PrintAgentCredential[]
+  alerts DispatcherAlert[]
+  routeOriginAddress String?
+  routeOriginLatitude Float?
+  routeOriginLongitude Float?
+  routeEndAddress String?
+  routeEndLatitude Float?
+  routeEndLongitude Float?
+  dispatcherPhone String?
+  createdAt  DateTime    @default(now())
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String
+  role           UserRole
+  passwordHash   String?
+  active         Boolean      @default(true)
+  driver         Driver?
+  sessions       AuthSession[]
+  createdAt      DateTime     @default(now())
+  @@unique([organizationId, email])
+}
+
+model Driver {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?      @unique
+  user           User?        @relation(fields: [userId], references: [id])
+  displayName    String
+  phone          String?
+  active         Boolean      @default(true)
+  aliases        DriverAlias[]
+  devices        DriverDevice[]
+  enrollmentCodes DeviceEnrollmentCode[]
+  deliveries     Delivery[]
+  routes         Route[]
+  createdAt      DateTime     @default(now())
+}
+
+model DriverAlias {
+  id       String @id @default(cuid())
+  driverId String
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  alias    String
+  @@unique([driverId, alias])
+}
+
+model Facility {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  address1       String
+  address2       String?
+  city           String
+  state          String
+  postalCode     String
+  latitude       Float?
+  longitude      Float?
+  deliveries     Delivery[]
+}
+
+model Delivery {
+  id               String          @id @default(cuid())
+  organizationId   String
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  externalLogNumber String?
+  patientName      String
+  facilityId       String?
+  facility         Facility?       @relation(fields: [facilityId], references: [id])
+  address1         String
+  address2         String?
+  city             String
+  state            String
+  postalCode       String
+  latitude         Float?
+  longitude        Float?
+  driverId         String?
+  driver           Driver?         @relation(fields: [driverId], references: [id])
+  routeStopId      String?
+  routeStop        RouteStop?      @relation(fields: [routeStopId], references: [id])
+  status           DeliveryStatus  @default(PENDING)
+  outcome          DeliveryOutcome @default(PENDING)
+  recipientName    String?
+  relationship     Relationship?
+  signatureObjectKey String?
+  signedPdfObjectKey String?
+  originalPdfObjectKey String?
+  completedAt      DateTime?
+  exceptionNotes   String?
+  returnedAt       DateTime?
+  returnNotes      String?
+  barcodeValue     String?
+  barcodeVerifiedAt DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  scans            BarcodeScan[]
+  audits           AuditEvent[]
+  receiptImports   ReceiptImport[]
+  @@index([organizationId, externalLogNumber])
+}
+
+model Route {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  driverId            String
+  driver              Driver       @relation(fields: [driverId], references: [id])
+  routeDate            DateTime
+  plannedDrivingMinutes Int        @default(0)
+  plannedStopMinutes    Int        @default(0)
+  startedAt             DateTime?
+  completedAt           DateTime?
+  stops                 RouteStop[]
+  createdAt             DateTime   @default(now())
+}
+
+model RouteStop {
+  id            String     @id @default(cuid())
+  routeId       String
+  route         Route      @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  sequence      Int
+  facilityName  String?
+  address1      String
+  address2      String?
+  city          String
+  state         String
+  postalCode    String
+  latitude      Float?
+  longitude     Float?
+  plannedMinutes Int       @default(5)
+  driveMinutesFromPrevious Int @default(0)
+  arrivedAt     DateTime?
+  completedAt   DateTime?
+  deliveries    Delivery[]
+  @@unique([routeId, sequence])
+}
+
+model BarcodeScan {
+  id         String   @id @default(cuid())
+  deliveryId String?
+  delivery   Delivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  scannedValue String
+  matched    Boolean
+  latitude   Float?
+  longitude  Float?
+  scannedAt  DateTime @default(now())
+}
+
+model AuditEvent {
+  id         String    @id @default(cuid())
+  deliveryId String?
+  delivery   Delivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  actorUserId String?
+  type       String
+  details    Json?
+  createdAt  DateTime  @default(now())
+}
+model ReceiptImport {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  source             String       @default("MANUAL_UPLOAD")
+  originalFilename   String?
+  objectKey          String
+  sha256             String
+  template           String?
+  pageCount          Int          @default(1)
+  logNumber          String?
+  parsedDriverRaw    String?
+  parsedDriverAlias  String?
+  parsedAddress      String?
+  parsedJson         Json?
+  status             String       @default("PARSED")
+  deliveryId         String?
+  delivery           Delivery?    @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  createdAt          DateTime     @default(now())
+
+  @@index([organizationId, logNumber])
+  @@index([organizationId, sha256])
+}
+
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model DriverDevice {
+  id         String   @id @default(cuid())
+  driverId   String
+  driver     Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  name       String?
+  tokenHash  String   @unique
+  active     Boolean  @default(true)
+  enrolledAt DateTime @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+
+  @@index([driverId, active])
+}
+
+model DeviceEnrollmentCode {
+  id         String   @id @default(cuid())
+  driverId   String
+  driver     Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  codeHash   String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([driverId, expiresAt])
+}
+
+model PrintAgentCredential {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  tokenHash      String       @unique
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  lastSeenAt     DateTime?
+
+  @@index([organizationId, active])
+}
+
+model DispatcherAlert {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           String
+  severity       String       @default("INFO")
+  title          String
+  message        String
+  deliveryId     String?
+  routeId        String?
+  acknowledgedAt DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, acknowledgedAt, createdAt])
+}

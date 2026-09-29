@@ -1,0 +1,9 @@
+{
+  "name":"Delivery Platform Driver",
+  "short_name":"Delivery",
+  "start_url":"/driver",
+  "display":"standalone",
+  "background_color":"#f3f4f6",
+  "theme_color":"#111827",
+  "icons":[]
+}

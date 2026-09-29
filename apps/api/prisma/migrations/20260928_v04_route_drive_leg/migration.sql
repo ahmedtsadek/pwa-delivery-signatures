@@ -1,0 +1,2 @@
+ALTER TABLE "RouteStop"
+ADD COLUMN "driveMinutesFromPrevious" INTEGER NOT NULL DEFAULT 0;
