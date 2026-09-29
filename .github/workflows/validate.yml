@@ -26,7 +26,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://delivery:delivery@localhost:5432/delivery
       NEXT_PUBLIC_API_URL: ""
-      BOOTSTRAP_KEY: test-bootstrap
       API_PORT: 8787
       STORAGE_ROOT: /tmp/delivery-storage
 
