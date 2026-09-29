@@ -48,7 +48,7 @@ async function openProtectedDocument(deliveryId: string, kind: 'original'|'signe
 
 export default function DeliveryDetailPage() {
   const params = useParams<{ id: string }>();
-  const deliveryId = Array.isArray(params?.id) ? deliveryId[0] : params?.id;
+  const deliveryId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [organizationId, setOrganizationId] = useState('');
   const [delivery, setDelivery] = useState<DeliveryDetail | null>(null);
   const [error, setError] = useState('');
