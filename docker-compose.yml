@@ -4,14 +4,27 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        secret=/run/pwa-secrets/database
+        if [ ! -s "$$secret" ]; then
+          umask 077
+          mkdir -p "$$(dirname "$$secret")"
+          head -c 48 /dev/urandom | base64 | tr -d '\n' > "$$secret"
+        fi
+        export POSTGRES_PASSWORD_FILE="$$secret"
+        exec docker-entrypoint.sh postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-delivery}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-this-db-password}
-      POSTGRES_DB: ${POSTGRES_DB:-delivery}
+      POSTGRES_USER: delivery
+      POSTGRES_PASSWORD_FILE: /run/pwa-secrets/database
+      POSTGRES_DB: delivery
     volumes:
       - ${APP_DATA_DIR:-/DATA/AppData/pwa-delivery-signatures}/postgres:/var/lib/postgresql/data
+      - ${APP_DATA_DIR:-/DATA/AppData/pwa-delivery-signatures}/secrets:/run/pwa-secrets
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-delivery} -d ${POSTGRES_DB:-delivery}"]
+      test: ["CMD-SHELL", "pg_isready -U delivery -d delivery"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -25,10 +38,13 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-delivery}:${POSTGRES_PASSWORD:-change-this-db-password}@postgres:5432/${POSTGRES_DB:-delivery}
+      DB_PASSWORD_FILE: /run/pwa-secrets/database
+      DB_USER: delivery
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: delivery
       API_PORT: 8787
       STORAGE_ROOT: /data/storage
-      BOOTSTRAP_KEY: ${BOOTSTRAP_KEY:-change-this-bootstrap-key}
       USER_SESSION_HOURS: ${USER_SESSION_HOURS:-12}
       DEVICE_TOKEN_DAYS: ${DEVICE_TOKEN_DAYS:-180}
       DEV_AUTH_BYPASS: "false"
@@ -37,6 +53,7 @@ services:
       GEOCODER_BASE_URL: ${GEOCODER_BASE_URL:-}
     volumes:
       - ${APP_DATA_DIR:-/DATA/AppData/pwa-delivery-signatures}/storage:/data/storage
+      - ${APP_DATA_DIR:-/DATA/AppData/pwa-delivery-signatures}/secrets:/run/pwa-secrets:ro
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8787/health"]
       interval: 15s

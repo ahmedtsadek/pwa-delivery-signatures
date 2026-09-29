@@ -1,12 +1,12 @@
 {
-  "name": "Delivery Platform Driver",
-  "short_name": "Delivery",
-  "description": "Pharmacy delivery route and proof-of-delivery app",
+  "name": "PWA Pharmacy Delivery",
+  "short_name": "PWA Delivery",
+  "description": "Pharmacy delivery routing, barcode verification and proof of delivery",
   "start_url": "/driver",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f3f4f6",
-  "theme_color": "#111827",
+  "theme_color": "#087CC4",
   "icons": [
     {
       "src": "/icon.svg",

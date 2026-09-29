@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 
 const API = process.env.INTEGRATION_API_BASE || 'http://127.0.0.1:8787';
-const BOOTSTRAP_KEY = process.env.BOOTSTRAP_KEY || 'test-bootstrap';
 
 async function jsonFetch(path: string, init: RequestInit = {}) {
   const response = await fetch(API + path, init);
@@ -42,8 +41,7 @@ async function main() {
       organizationName: 'Synthetic Pharmacy',
       name: 'Test Admin',
       email: 'admin@example.test',
-      password: 'IntegrationPass123!',
-      bootstrapKey: BOOTSTRAP_KEY
+      password: 'IntegrationPass123!'
     })
   });
   const organizationId = bootstrap.organization.id;

@@ -1,4 +1,4 @@
-# CasaOS deployment
+# PWA Pharmacy Delivery — CasaOS deployment
 
 This repository is packaged as a self-contained CasaOS Docker Compose application.
 
@@ -13,21 +13,20 @@ Default host port: **8677**.
 ## Install from GitHub in CasaOS
 
 1. Clone/download this repository onto the CasaOS host, or use CasaOS Compose import if your CasaOS build supports importing a Compose file from a repository.
-2. Copy `.env.casaos.example` to `.env`.
-3. Change `POSTGRES_PASSWORD` and `BOOTSTRAP_KEY`.
-4. From the repository directory run:
+2. No database password or bootstrap key is required; the database credential is generated automatically and persisted under the app data directory.
+3. From the repository directory run:
 
 ```bash
 docker compose up -d --build
 ```
 
-5. Open:
+4. Open:
 
 ```text
 http://CASAOS-IP:8677/setup
 ```
 
-6. Enter the same `BOOTSTRAP_KEY` from `.env`, then create the first organization and SUPER_ADMIN user.
+5. Create the first organization and SUPER_ADMIN user. Bootstrap automatically closes after the first user is created.
 
 After bootstrap, normal staff sign-in is at `/login` and driver phone enrollment is at `/enroll`.
 
@@ -38,9 +37,10 @@ By default:
 ```text
 /DATA/AppData/pwa-delivery-signatures/postgres
 /DATA/AppData/pwa-delivery-signatures/storage
+/DATA/AppData/pwa-delivery-signatures/secrets
 ```
 
-The second directory stores uploaded receipts, signatures, and signed receipt PDFs.
+The `storage` directory stores uploaded receipts, signatures, and signed receipt PDFs. The `secrets` directory contains the automatically generated database credential and should be backed up with the database.
 
 ## Reverse proxy / HTTPS
 

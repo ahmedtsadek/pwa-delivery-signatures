@@ -1,6 +1,6 @@
 # One-click CasaOS install
 
-This file exists specifically so CasaOS can install the Delivery Platform without
+This file exists specifically so CasaOS can install the PWA Pharmacy Delivery without
 cloning the repository or building Node applications on the CasaOS server.
 
 ## Import URL

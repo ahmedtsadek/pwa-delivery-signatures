@@ -167,7 +167,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'delivery-api', version: '1.0.0' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.0' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
@@ -176,23 +176,32 @@ app.post('/api/auth/bootstrap', async (req, res) => {
       organizationName: z.string().min(2),
       name: z.string().min(2),
       email: z.string().email(),
-      password: z.string().min(8),
-      bootstrapKey: z.string().optional()
+      password: z.string().min(8)
     }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-    const existingUsers = await prisma.user.count();
-    if (existingUsers > 0) return res.status(409).json({ error: 'Bootstrap already completed' });
-    const requiredKey = process.env.BOOTSTRAP_KEY;
-    if (requiredKey && parsed.data.bootstrapKey !== requiredKey) return res.status(403).json({ error: 'Invalid bootstrap key' });
-    const organization = await prisma.organization.create({ data: { name: parsed.data.organizationName } });
-    const user = await prisma.user.create({ data: {
-      organizationId: organization.id,
-      name: parsed.data.name,
-      email: normalizeEmail(parsed.data.email),
-      passwordHash: hashPassword(parsed.data.password),
-      role: 'SUPER_ADMIN'
-    }});
-    res.status(201).json({ organization, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+
+    const result = await prisma.$transaction(async tx => {
+      await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(7331042026)');
+      const existingUsers = await tx.user.count();
+      if (existingUsers > 0) return null;
+      const organization = await tx.organization.create({
+        data: { name: parsed.data.organizationName.trim() }
+      });
+      const user = await tx.user.create({ data: {
+        organizationId: organization.id,
+        name: parsed.data.name.trim(),
+        email: normalizeEmail(parsed.data.email),
+        passwordHash: hashPassword(parsed.data.password),
+        role: 'SUPER_ADMIN'
+      }});
+      return { organization, user };
+    });
+
+    if (!result) return res.status(409).json({ error: 'Bootstrap already completed' });
+    res.status(201).json({
+      organization: result.organization,
+      user: { id: result.user.id, name: result.user.name, email: result.user.email, role: result.user.role }
+    });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: 'Bootstrap failed', detail: error?.message || String(error) });

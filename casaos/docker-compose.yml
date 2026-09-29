@@ -4,14 +4,29 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        secret=/run/pwa-secrets/database
+        if [ ! -s "$$secret" ]; then
+          umask 077
+          mkdir -p "$$(dirname "$$secret")"
+          head -c 48 /dev/urandom | base64 | tr -d '\n' > "$$secret"
+        fi
+        export POSTGRES_PASSWORD_FILE="$$secret"
+        exec docker-entrypoint.sh postgres
     environment:
       POSTGRES_USER: delivery
-      POSTGRES_PASSWORD: delivery-local-only-change-me
+      POSTGRES_PASSWORD_FILE: /run/pwa-secrets/database
       POSTGRES_DB: delivery
     volumes:
       - type: bind
         source: /DATA/AppData/com.tee4it.delivery-platform/postgres
         target: /var/lib/postgresql/data
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/secrets
+        target: /run/pwa-secrets
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U delivery -d delivery"]
       interval: 10s
@@ -27,10 +42,13 @@ services:
     links:
       - postgres:postgres
     environment:
-      DATABASE_URL: postgresql://delivery:delivery-local-only-change-me@postgres:5432/delivery
+      DB_PASSWORD_FILE: /run/pwa-secrets/database
+      DB_USER: delivery
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: delivery
       API_PORT: "8787"
       STORAGE_ROOT: /data/storage
-      BOOTSTRAP_KEY: ""
       USER_SESSION_HOURS: "12"
       DEVICE_TOKEN_DAYS: "180"
       DEV_AUTH_BYPASS: "false"
@@ -41,6 +59,10 @@ services:
       - type: bind
         source: /DATA/AppData/com.tee4it.delivery-platform/storage
         target: /data/storage
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/secrets
+        target: /run/pwa-secrets
+        read_only: true
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8787/health"]
       interval: 15s
@@ -70,29 +92,29 @@ x-casaos:
   scheme: http
   icon: https://raw.githubusercontent.com/ahmedtsadek/pwa-delivery-signatures/main/apps/web/public/icon.svg
   title:
-    en_US: Delivery Platform
+    en_US: PWA Pharmacy Delivery
   tagline:
-    en_US: Pharmacy delivery routing, barcode verification and proof of delivery.
+    en_US: Smart pharmacy delivery routing, barcode verification and proof of delivery.
   description:
     en_US: >-
-      Standalone pharmacy delivery platform with dispatcher dashboard, driver PWA,
-      PDF receipt ingestion, route optimization, barcode verification, signatures,
-      signed receipt generation, returns and audit history.
+      PWA Pharmacy Delivery is a standalone pharmacy delivery platform with a
+      dispatcher dashboard, driver PWA, receipt ingestion, route optimization,
+      barcode verification, signatures, signed receipts, returns and audit history.
   author: Ahmed T. Sadek
   developer: TEE4IT
   category: Productivity
   architectures:
     - amd64
     - arm64
-  version: "1.0.2"
+  version: "1.1.0"
   update_at: "2026-09-29"
   release_notes:
-    en_US: Improve CasaOS compatibility using fixed AppData paths and service links on the default bridge network.
+    en_US: Automatic database credentials, simpler first-time setup, new PWA Pharmacy Delivery branding and icon.
   repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
   docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
   tips:
     before_install:
       en_US: >-
-        After installation, open /setup immediately and create the first admin.
-        The database is private to this Docker network. For production, deploy
-        behind HTTPS before using driver camera/barcode features or real patient data.
+        Database credentials are generated automatically on first start. After
+        installation, open /setup and create the first pharmacy administrator.
+        For production, use HTTPS before real patient data or driver camera features.
