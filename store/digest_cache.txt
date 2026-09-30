@@ -1,0 +1,4 @@
+alpine:3.22 sha256:3e9b4b680bfc9fb5269227cffbd6d42be39fbf7c0b908123913864aa4447e764
+ghcr.io/ahmedtsadek/pwa-delivery-signatures-api:latest sha256:371a90d645394f17a99b000decc163cee47229f4ed227ff7adf0ecd6f0b68c48
+ghcr.io/ahmedtsadek/pwa-delivery-signatures-web:latest sha256:0039d804e12ddb372f4f4def468c0350e8572412ebba8383e53f878542f108a9
+postgres:16-alpine sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551

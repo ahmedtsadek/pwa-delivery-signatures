@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "updated_at": "2026-09-30T01:17:39Z",
+  "app_count": 1,
+  "base_url": "https://cdn.jsdelivr.net/gh/ahmedtsadek/pwa-delivery-signatures@gh-pages",
+  "apps": [
+    {
+      "id": "com.tee4it.delivery-platform",
+      "title": "PWA Pharmacy Delivery",
+      "tagline": "Smart pharmacy delivery routing, barcode verification and proof of delivery.",
+      "category": "Productivity",
+      "categories": [
+        "productivity"
+      ],
+      "author": "Ahmed T. Sadek",
+      "developer": "TEE4IT",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "icon": "/apps/com.tee4it.delivery-platform/assets/icon.png",
+      "thumbnail": "",
+      "compose_url": "/apps/com.tee4it.delivery-platform/docker-compose.yml",
+      "meta_url": "/apps/com.tee4it.delivery-platform/meta.json",
+      "content_hash": "4206d641",
+      "version": "1.1.7"
+    }
+  ]
+}

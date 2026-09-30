@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "store_id": "tee4it-appstore",
+  "name": "TEE4IT App Store",
+  "description": "TEE4IT self-hosted applications for CasaOS and ZimaOS.",
+  "maintainer": "ahmedtsadek",
+  "url": "https://github.com/ahmedtsadek/pwa-delivery-signatures"
+}

@@ -1,0 +1,32 @@
+{
+  "tagline": "Smart pharmacy delivery routing, barcode verification and proof of delivery.",
+  "description": "PWA Pharmacy Delivery is a standalone pharmacy delivery platform with a dispatcher dashboard, driver PWA, receipt ingestion, route optimization, barcode verification, signatures, signed receipts, returns and audit history.",
+  "author": "Ahmed T. Sadek",
+  "developer": "TEE4IT",
+  "category": "Productivity",
+  "architectures": [
+    "amd64",
+    "arm64"
+  ],
+  "update_at": "2026-09-29",
+  "repo": "https://github.com/ahmedtsadek/pwa-delivery-signatures",
+  "docs": "https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md",
+  "support": "https://github.com/ahmedtsadek/pwa-delivery-signatures/issues",
+  "website": "https://delivery.tee4it.com",
+  "tips": {
+    "before_install": "Database credentials are generated automatically on first start. After installation, open /setup and create the first pharmacy administrator. For production, use HTTPS before real patient data or driver camera features."
+  },
+  "title": "PWA Pharmacy Delivery",
+  "release_note": "Adds LocationIQ geocoding and openrouteservice matrix routing providers.",
+  "base_url": "https://cdn.jsdelivr.net/gh/ahmedtsadek/pwa-delivery-signatures@gh-pages",
+  "id": "com.tee4it.delivery-platform",
+  "version": "1.1.7",
+  "categories": [
+    "productivity"
+  ],
+  "min_memory": 0,
+  "min_image_size": {
+    "amd64": 640635733,
+    "arm64": 627770277
+  }
+}

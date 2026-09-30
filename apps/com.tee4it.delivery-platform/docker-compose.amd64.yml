@@ -1,0 +1,114 @@
+name: pwa-delivery-signatures
+
+services:
+  secret-init:
+    image: alpine:3.22@sha256:3e9b4b680bfc9fb5269227cffbd6d42be39fbf7c0b908123913864aa4447e764
+    restart: "no"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        mkdir -p /run/pwa-secrets
+        if [ ! -s /run/pwa-secrets/database ]; then
+          umask 077
+          head -c 48 /dev/urandom | base64 | tr -d '\n' > /run/pwa-secrets/database
+        fi
+        chmod 600 /run/pwa-secrets/database
+        test -s /run/pwa-secrets/database
+    volumes:
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/secrets
+        target: /run/pwa-secrets
+
+  postgres:
+    image: postgres:16-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
+    restart: unless-stopped
+    depends_on:
+      secret-init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_USER: delivery
+      POSTGRES_PASSWORD_FILE: /run/pwa-secrets/database
+      POSTGRES_DB: delivery
+    volumes:
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/postgres
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/secrets
+        target: /run/pwa-secrets
+        read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U delivery -d delivery"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/ahmedtsadek/pwa-delivery-signatures-api:latest@sha256:371a90d645394f17a99b000decc163cee47229f4ed227ff7adf0ecd6f0b68c48
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    links:
+      - postgres:postgres
+    environment:
+      DB_PASSWORD_FILE: /run/pwa-secrets/database
+      DB_USER: delivery
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: delivery
+      API_PORT: "8787"
+      STORAGE_ROOT: /data/storage
+      USER_SESSION_HOURS: "12"
+      DEVICE_TOKEN_DAYS: "180"
+      DEV_AUTH_BYPASS: "false"
+      ROUTER_PROVIDER: "openrouteservice"
+      ROUTER_BASE_URL: "https://api.heigit.org/openrouteservice/v2"
+      OPENROUTESERVICE_API_KEY: ""
+      GEOCODER_PROVIDER: "locationiq"
+      GEOCODER_BASE_URL: "https://us1.locationiq.com/v1"
+      LOCATIONIQ_API_KEY: ""
+      GEOCODER_COUNTRYCODES: "us"
+      GEOCODER_USER_AGENT: "PWA-Pharmacy-Delivery/1.1.6"
+      GEOCODER_MIN_INTERVAL_MS: ""
+      CORS_ORIGINS: ""
+    volumes:
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/storage
+        target: /data/storage
+      - type: bind
+        source: /DATA/AppData/com.tee4it.delivery-platform/secrets
+        target: /run/pwa-secrets
+        read_only: true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8787/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  web:
+    image: ghcr.io/ahmedtsadek/pwa-delivery-signatures-web:latest@sha256:0039d804e12ddb372f4f4def468c0350e8572412ebba8383e53f878542f108a9
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    links:
+      - api:api
+    ports:
+      - target: 3000
+        published: "8677"
+        protocol: tcp
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+
+x-casaos:
+  id: com.tee4it.delivery-platform
+  main: web
+  index: /
+  port_map: "8677"
+  scheme: http
+  icon: https://cdn.jsdelivr.net/gh/ahmedtsadek/pwa-delivery-signatures@gh-pages/apps/com.tee4it.delivery-platform/assets/icon.png
+  title:
+    en_US: PWA Pharmacy Delivery
+  version: "1.1.7"
