@@ -1342,7 +1342,7 @@ app.patch('/api/deliveries/:deliveryId', async (req, res) => {
   const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN','DISPATCHER']);
   if (!actor) return;
 
-  if ([DeliveryStatus.DELIVERED, DeliveryStatus.RETURNED].includes(existing.status)) {
+  if (existing.status === DeliveryStatus.DELIVERED || existing.status === DeliveryStatus.RETURNED) {
     return res.status(409).json({ error: 'Completed deliveries are locked. Keep the audit record instead of editing it.' });
   }
 
@@ -1474,7 +1474,7 @@ app.delete('/api/deliveries/:deliveryId', async (req, res) => {
   if (!actor) return;
 
   if (existing.routeStopId) return res.status(409).json({ error: 'Remove the delivery from its route before deleting it.' });
-  if ([DeliveryStatus.DELIVERED, DeliveryStatus.OUT_FOR_DELIVERY, DeliveryStatus.RETURN_REQUIRED, DeliveryStatus.RETURNED].includes(existing.status)) {
+  if (existing.status === DeliveryStatus.DELIVERED || existing.status === DeliveryStatus.OUT_FOR_DELIVERY || existing.status === DeliveryStatus.RETURN_REQUIRED || existing.status === DeliveryStatus.RETURNED) {
     return res.status(409).json({ error: 'This delivery has operational history and cannot be deleted.' });
   }
   if (existing.signatureObjectKey || existing.signedPdfObjectKey || existing.barcodeVerifiedAt || existing.scans.length) {
