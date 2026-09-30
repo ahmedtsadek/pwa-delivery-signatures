@@ -167,7 +167,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.6' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.7' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
