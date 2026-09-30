@@ -31,3 +31,30 @@ GET <GEOCODER_BASE_URL>/search?format=jsonv2&limit=1&q=<address>
 A self-hosted Nominatim instance therefore works directly. Configure the API container with the internal or HTTPS base URL of that service.
 
 Coordinates are stored on each delivery after a successful lookup so route rebuilding does not need to geocode the same delivery again unless its address is edited or the dispatcher explicitly re-geocodes it.
+
+
+## LocationIQ + openrouteservice
+
+Recommended hosted setup:
+
+```
+GEOCODER_PROVIDER=locationiq
+GEOCODER_BASE_URL=https://us1.locationiq.com/v1
+LOCATIONIQ_API_KEY=YOUR_LOCATIONIQ_KEY
+GEOCODER_COUNTRYCODES=us
+
+ROUTER_PROVIDER=openrouteservice
+ROUTER_BASE_URL=https://api.heigit.org/openrouteservice/v2
+OPENROUTESERVICE_API_KEY=YOUR_ORS_KEY
+```
+
+LocationIQ forward geocoding uses `/search?key=...` and returns Nominatim-style `lat`/`lon` values.
+
+openrouteservice routing uses the matrix endpoint:
+
+```
+POST /matrix/driving-car
+Authorization: <API key>
+```
+
+The application sends the pharmacy origin plus all stop coordinates in one matrix request, then performs nearest-neighbor + 2-opt ordering locally.

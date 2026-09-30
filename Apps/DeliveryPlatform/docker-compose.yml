@@ -63,8 +63,12 @@ services:
       USER_SESSION_HOURS: "12"
       DEVICE_TOKEN_DAYS: "180"
       DEV_AUTH_BYPASS: "false"
-      ROUTER_BASE_URL: ""
-      GEOCODER_BASE_URL: ""
+      ROUTER_PROVIDER: "openrouteservice"
+      ROUTER_BASE_URL: "https://api.heigit.org/openrouteservice/v2"
+      OPENROUTESERVICE_API_KEY: ""
+      GEOCODER_PROVIDER: "locationiq"
+      GEOCODER_BASE_URL: "https://us1.locationiq.com/v1"
+      LOCATIONIQ_API_KEY: ""
       GEOCODER_COUNTRYCODES: "us"
       GEOCODER_USER_AGENT: "PWA-Pharmacy-Delivery/1.1.6"
       GEOCODER_MIN_INTERVAL_MS: ""
@@ -120,10 +124,10 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "1.1.6"
+  version: "1.1.7"
   update_at: "2026-09-29"
   release_notes:
-    en_US: Adds driver management, delivery edit/assignment/geocoding/delete controls, and safer geocoder configuration.
+    en_US: Adds LocationIQ geocoding and openrouteservice matrix routing providers.
   repo: https://github.com/ahmedtsadek/pwa-delivery-signatures
   docs: https://github.com/ahmedtsadek/pwa-delivery-signatures/blob/main/CASAOS.md
   support: https://github.com/ahmedtsadek/pwa-delivery-signatures/issues

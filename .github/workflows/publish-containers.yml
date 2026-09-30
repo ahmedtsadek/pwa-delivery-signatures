@@ -61,9 +61,9 @@ jobs:
           push: true
           tags: |
             ${{ matrix.target_image }}:latest
-            ${{ matrix.target_image }}:1.1.6
+            ${{ matrix.target_image }}:1.1.7
           labels: |
             org.opencontainers.image.source=https://github.com/ahmedtsadek/pwa-delivery-signatures
-            org.opencontainers.image.version=1.1.6
+            org.opencontainers.image.version=1.1.7
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
