@@ -659,7 +659,7 @@ app.get('/api/organizations/:organizationId/dispatcher/today', async (req, res) 
     })
   ]);
   const completedToday = todayDeliveries.filter(d => d.status === DeliveryStatus.DELIVERED).length;
-  const exceptionsToday = todayDeliveries.filter(d => [DeliveryStatus.EXCEPTION, DeliveryStatus.RETURN_REQUIRED].includes(d.status)).length;
+  const exceptionsToday = todayDeliveries.filter(d => d.status === DeliveryStatus.EXCEPTION || d.status === DeliveryStatus.RETURN_REQUIRED).length;
 
   res.json({
     asOf: new Date(),
