@@ -58,11 +58,39 @@ export function nearestNeighborOrder(candidates: RouteCandidate[], origin: GeoPo
   return order;
 }
 
+let lastGeocodeRequestAt = 0;
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function geocodeAddress(address: string): Promise<GeoPoint | null> {
   const base = (process.env.GEOCODER_BASE_URL || '').replace(/\/$/, '');
   if (!base) return null;
-  const url = `${base}/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`;
-  const response = await fetch(url, { headers: { 'user-agent': process.env.GEOCODER_USER_AGENT || 'delivery-platform/1.0' } });
+
+  const baseUrl = new URL(base);
+  const isPublicNominatim = baseUrl.hostname === 'nominatim.openstreetmap.org';
+  const configuredInterval = Number(process.env.GEOCODER_MIN_INTERVAL_MS || '');
+  const minIntervalMs = Number.isFinite(configuredInterval) && configuredInterval >= 0
+    ? configuredInterval
+    : (isPublicNominatim ? 1100 : 0);
+
+  const elapsed = Date.now() - lastGeocodeRequestAt;
+  if (minIntervalMs > 0 && elapsed < minIntervalMs) await sleep(minIntervalMs - elapsed);
+
+  const url = new URL(base + '/search');
+  url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('limit', '1');
+  url.searchParams.set('q', address);
+  const countrycodes = String(process.env.GEOCODER_COUNTRYCODES || '').trim();
+  if (countrycodes) url.searchParams.set('countrycodes', countrycodes);
+
+  lastGeocodeRequestAt = Date.now();
+  const response = await fetch(url, {
+    headers: {
+      'user-agent': process.env.GEOCODER_USER_AGENT || 'PWA-Pharmacy-Delivery/1.1.6'
+    }
+  });
   if (!response.ok) throw new Error(`Geocoder failed: ${response.status}`);
   const payload: any[] = await response.json();
   if (!payload?.length) return null;

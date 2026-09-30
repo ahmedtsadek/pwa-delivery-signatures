@@ -167,7 +167,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.5' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.6' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
@@ -420,10 +420,11 @@ app.post('/api/organizations', async (req, res) => {
 app.get('/api/organizations/:organizationId/drivers', async (req, res) => {
   const actor = await requireOrganizationUser(req, res, req.params.organizationId);
   if (!actor) return;
+  const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
   const drivers = await prisma.driver.findMany({
-    where: { organizationId: req.params.organizationId, active: true },
+    where: { organizationId: req.params.organizationId, ...(includeInactive ? {} : { active: true }) },
     include: { aliases: true },
-    orderBy: { displayName: 'asc' }
+    orderBy: [{ active: 'desc' }, { displayName: 'asc' }]
   });
   res.json({ drivers });
 });
@@ -452,6 +453,82 @@ app.post('/api/organizations/:organizationId/drivers', async (req, res) => {
   res.status(201).json(driver);
 });
 
+
+app.patch('/api/drivers/:driverId', async (req, res) => {
+  const existing = await prisma.driver.findUnique({ where: { id: req.params.driverId }, include: { aliases: true } });
+  if (!existing) return res.status(404).json({ error: 'Driver not found' });
+  const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN','DISPATCHER']);
+  if (!actor) return;
+
+  const parsed = z.object({
+    displayName: z.string().trim().min(1).optional(),
+    phone: z.string().trim().optional().nullable(),
+    aliases: z.array(z.string().trim().min(1)).optional(),
+    active: z.boolean().optional()
+  }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  if (parsed.data.active === false) {
+    const activeRoute = await prisma.route.findFirst({
+      where: { driverId: existing.id, completedAt: null },
+      select: { id: true }
+    });
+    if (activeRoute) return res.status(409).json({ error: 'Driver has an active/planned route. Complete or remove the route before deactivating this driver.' });
+  }
+
+  const aliases = parsed.data.aliases == null
+    ? null
+    : [...new Set(parsed.data.aliases.map(a => a.trim()).filter(Boolean))];
+
+  const driver = await prisma.$transaction(async tx => {
+    if (aliases) {
+      await tx.driverAlias.deleteMany({ where: { driverId: existing.id } });
+      if (aliases.length) {
+        await tx.driverAlias.createMany({ data: aliases.map(alias => ({ driverId: existing.id, alias })) });
+      }
+    }
+    const updated = await tx.driver.update({
+      where: { id: existing.id },
+      data: {
+        ...(parsed.data.displayName !== undefined ? { displayName: parsed.data.displayName } : {}),
+        ...(parsed.data.phone !== undefined ? { phone: parsed.data.phone || null } : {}),
+        ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {})
+      },
+      include: { aliases: true }
+    });
+    if (parsed.data.active === false) {
+      await tx.driverDevice.updateMany({ where: { driverId: existing.id, active: true }, data: { active: false } });
+      await tx.deviceEnrollmentCode.deleteMany({ where: { driverId: existing.id, usedAt: null } });
+    }
+    return updated;
+  });
+
+  res.json({ driver });
+});
+
+app.post('/api/drivers/:driverId/deactivate', async (req, res) => {
+  const existing = await prisma.driver.findUnique({ where: { id: req.params.driverId } });
+  if (!existing) return res.status(404).json({ error: 'Driver not found' });
+  const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN','DISPATCHER']);
+  if (!actor) return;
+  const activeRoute = await prisma.route.findFirst({ where: { driverId: existing.id, completedAt: null }, select: { id: true } });
+  if (activeRoute) return res.status(409).json({ error: 'Driver has an active/planned route. Complete or remove the route first.' });
+  await prisma.$transaction([
+    prisma.driver.update({ where: { id: existing.id }, data: { active: false } }),
+    prisma.driverDevice.updateMany({ where: { driverId: existing.id }, data: { active: false } }),
+    prisma.deviceEnrollmentCode.deleteMany({ where: { driverId: existing.id, usedAt: null } })
+  ]);
+  res.json({ ok: true });
+});
+
+app.post('/api/drivers/:driverId/reactivate', async (req, res) => {
+  const existing = await prisma.driver.findUnique({ where: { id: req.params.driverId } });
+  if (!existing) return res.status(404).json({ error: 'Driver not found' });
+  const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN','DISPATCHER']);
+  if (!actor) return;
+  const driver = await prisma.driver.update({ where: { id: existing.id }, data: { active: true }, include: { aliases: true } });
+  res.json({ driver });
+});
 
 
 function localDayRange(date = new Date()) {
@@ -1242,6 +1319,174 @@ app.get('/api/organizations/:organizationId/deliveries', async (req, res) => {
       signatureObjectKey: undefined
     }))
   });
+});
+
+const deliveryEditSchema = z.object({
+  patientName: z.string().trim().min(1).optional(),
+  address1: z.string().trim().min(1).optional(),
+  address2: z.string().trim().optional().nullable(),
+  city: z.string().trim().min(1).optional(),
+  state: z.string().trim().min(2).optional(),
+  postalCode: z.string().trim().min(3).optional(),
+  driverId: z.string().trim().optional().nullable(),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable()
+});
+
+app.patch('/api/deliveries/:deliveryId', async (req, res) => {
+  const existing = await prisma.delivery.findUnique({
+    where: { id: req.params.deliveryId },
+    include: { routeStop: { include: { route: true } } }
+  });
+  if (!existing) return res.status(404).json({ error: 'Delivery not found' });
+  const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN','DISPATCHER']);
+  if (!actor) return;
+
+  if (existing.status === DeliveryStatus.DELIVERED || existing.status === DeliveryStatus.RETURNED) {
+    return res.status(409).json({ error: 'Completed deliveries are locked. Keep the audit record instead of editing it.' });
+  }
+
+  const parsed = deliveryEditSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const addressChanging = ['address1','address2','city','state','postalCode'].some(k => Object.prototype.hasOwnProperty.call(parsed.data, k));
+  const driverChanging = Object.prototype.hasOwnProperty.call(parsed.data, 'driverId') && parsed.data.driverId !== existing.driverId;
+
+  if (existing.routeStopId && (addressChanging || driverChanging)) {
+    return res.status(409).json({ error: 'Remove this delivery from its route before changing its address or driver.' });
+  }
+
+  let nextDriverId = existing.driverId;
+  if (Object.prototype.hasOwnProperty.call(parsed.data, 'driverId')) {
+    nextDriverId = parsed.data.driverId || null;
+    if (nextDriverId) {
+      const driver = await prisma.driver.findFirst({ where: { id: nextDriverId, organizationId: existing.organizationId, active: true } });
+      if (!driver) return res.status(404).json({ error: 'Active driver not found for this organization' });
+    }
+  }
+
+  const updateData: any = {
+    ...(parsed.data.patientName !== undefined ? { patientName: parsed.data.patientName } : {}),
+    ...(parsed.data.address1 !== undefined ? { address1: parsed.data.address1 } : {}),
+    ...(parsed.data.address2 !== undefined ? { address2: parsed.data.address2 || null } : {}),
+    ...(parsed.data.city !== undefined ? { city: parsed.data.city } : {}),
+    ...(parsed.data.state !== undefined ? { state: parsed.data.state.toUpperCase() } : {}),
+    ...(parsed.data.postalCode !== undefined ? { postalCode: parsed.data.postalCode } : {}),
+    ...(Object.prototype.hasOwnProperty.call(parsed.data, 'driverId') ? { driverId: nextDriverId } : {})
+  };
+
+  if (parsed.data.latitude !== undefined) updateData.latitude = parsed.data.latitude;
+  if (parsed.data.longitude !== undefined) updateData.longitude = parsed.data.longitude;
+  if (addressChanging && parsed.data.latitude === undefined && parsed.data.longitude === undefined) {
+    updateData.latitude = null;
+    updateData.longitude = null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(parsed.data, 'driverId')) {
+    updateData.status = nextDriverId ? DeliveryStatus.ASSIGNED : DeliveryStatus.PENDING;
+  }
+
+  const updated = await prisma.delivery.update({ where: { id: existing.id }, data: updateData });
+  await prisma.auditEvent.create({
+    data: {
+      deliveryId: existing.id,
+      actorUserId: actor?.id,
+      type: 'DELIVERY_EDITED',
+      details: {
+        changedFields: Object.keys(parsed.data),
+        driverId: nextDriverId,
+        addressChanged: addressChanging
+      }
+    }
+  });
+
+  res.json({ delivery: updated });
+});
+
+app.post('/api/deliveries/:deliveryId/geocode', async (req, res) => {
+  const existing = await prisma.delivery.findUnique({ where: { id: req.params.deliveryId } });
+  if (!existing) return res.status(404).json({ error: 'Delivery not found' });
+  const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN','DISPATCHER']);
+  if (!actor) return;
+  if (existing.routeStopId) return res.status(409).json({ error: 'Remove this delivery from its route before re-geocoding it.' });
+
+  const address = [existing.address1, existing.address2, existing.city, existing.state, existing.postalCode].filter(Boolean).join(', ');
+  const point = await geocodeAddress(address);
+  if (!point) return res.status(422).json({ error: 'GEOCODE_NOT_FOUND', message: 'No coordinates were found for this address.' });
+
+  const delivery = await prisma.delivery.update({
+    where: { id: existing.id },
+    data: { latitude: point.latitude, longitude: point.longitude }
+  });
+  await prisma.auditEvent.create({
+    data: { deliveryId: existing.id, actorUserId: actor?.id, type: 'DELIVERY_GEOCODED', details: { address, ...point } }
+  });
+  res.json({ delivery, point });
+});
+
+app.post('/api/deliveries/:deliveryId/remove-from-route', async (req, res) => {
+  const existing = await prisma.delivery.findUnique({
+    where: { id: req.params.deliveryId },
+    include: { routeStop: { include: { route: true, deliveries: true } } }
+  });
+  if (!existing) return res.status(404).json({ error: 'Delivery not found' });
+  const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN','DISPATCHER']);
+  if (!actor) return;
+  if (!existing.routeStopId || !existing.routeStop) return res.json({ ok: true, message: 'Delivery is not currently on a route.' });
+  if (existing.routeStop.route.startedAt) return res.status(409).json({ error: 'Cannot remove a delivery after its route has started.' });
+
+  const stopId = existing.routeStop.id;
+  const routeId = existing.routeStop.route.id;
+  await prisma.delivery.update({
+    where: { id: existing.id },
+    data: { routeStopId: null, status: existing.driverId ? DeliveryStatus.ASSIGNED : DeliveryStatus.PENDING }
+  });
+
+  const remainingAtStop = await prisma.delivery.count({ where: { routeStopId: stopId } });
+  if (remainingAtStop === 0) await prisma.routeStop.delete({ where: { id: stopId } });
+
+  const remainingStops = await prisma.routeStop.findMany({ where: { routeId }, orderBy: { sequence: 'asc' } });
+  await prisma.$transaction(remainingStops.map((stop, index) =>
+    prisma.routeStop.update({ where: { id: stop.id }, data: { sequence: -(index + 1) } })
+  ));
+  const negativeStops = await prisma.routeStop.findMany({ where: { routeId }, orderBy: { sequence: 'desc' } });
+  await prisma.$transaction(negativeStops.map((stop, index) =>
+    prisma.routeStop.update({ where: { id: stop.id }, data: { sequence: index + 1 } })
+  ));
+  await prisma.route.update({
+    where: { id: routeId },
+    data: { plannedStopMinutes: remainingStops.length * STOP_SERVICE_MINUTES }
+  });
+
+  await prisma.auditEvent.create({
+    data: { deliveryId: existing.id, actorUserId: actor?.id, type: 'REMOVED_FROM_ROUTE', details: { routeId, stopId } }
+  });
+  res.json({ ok: true });
+});
+
+app.delete('/api/deliveries/:deliveryId', async (req, res) => {
+  const existing = await prisma.delivery.findUnique({
+    where: { id: req.params.deliveryId },
+    include: { scans: true, receiptImports: true }
+  });
+  if (!existing) return res.status(404).json({ error: 'Delivery not found' });
+  const actor = await requireOrganizationUser(req, res, existing.organizationId, ['SUPER_ADMIN','PHARMACY_ADMIN']);
+  if (!actor) return;
+
+  if (existing.routeStopId) return res.status(409).json({ error: 'Remove the delivery from its route before deleting it.' });
+  if (existing.status === DeliveryStatus.DELIVERED || existing.status === DeliveryStatus.OUT_FOR_DELIVERY || existing.status === DeliveryStatus.RETURN_REQUIRED || existing.status === DeliveryStatus.RETURNED) {
+    return res.status(409).json({ error: 'This delivery has operational history and cannot be deleted.' });
+  }
+  if (existing.signatureObjectKey || existing.signedPdfObjectKey || existing.barcodeVerifiedAt || existing.scans.length) {
+    return res.status(409).json({ error: 'This delivery contains proof/audit activity and cannot be deleted.' });
+  }
+
+  await prisma.$transaction(async tx => {
+    await tx.receiptImport.deleteMany({ where: { deliveryId: existing.id } });
+    await tx.auditEvent.deleteMany({ where: { deliveryId: existing.id } });
+    await tx.delivery.delete({ where: { id: existing.id } });
+  });
+  res.json({ ok: true });
 });
 
 app.get('/api/deliveries/:deliveryId', async (req, res) => {
