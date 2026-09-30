@@ -6,11 +6,11 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/pwa-icon/192', sizes: '192x192', type: 'image/png' },
       { url: '/icon.svg', type: 'image/svg+xml' }
     ],
     apple: [
-      { url: '/icons/apple-touch-icon.png', sizes: '192x192', type: 'image/png' }
+      { url: '/pwa-icon/180', sizes: '180x180', type: 'image/png' }
     ]
   },
   appleWebApp: {

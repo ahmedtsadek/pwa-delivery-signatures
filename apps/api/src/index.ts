@@ -167,7 +167,7 @@ async function ensureRouteAccess(req: express.Request, res: express.Response, ro
   return false;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.4' }));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'pwa-pharmacy-delivery-api', version: '1.1.5' }));
 
 
 app.post('/api/auth/bootstrap', async (req, res) => {
@@ -651,13 +651,23 @@ app.get('/api/organizations/:organizationId/dispatcher/today', async (req, res) 
       } : null
     };
   });
+  const [activeDriverCount, todayDeliveries] = await Promise.all([
+    prisma.driver.count({ where: { organizationId: req.params.organizationId, active: true } }),
+    prisma.delivery.findMany({
+      where: { organizationId: req.params.organizationId, createdAt: { gte: start, lt: end } },
+      select: { status: true }
+    })
+  ]);
+  const completedToday = todayDeliveries.filter(d => d.status === DeliveryStatus.DELIVERED).length;
+  const exceptionsToday = todayDeliveries.filter(d => d.status === DeliveryStatus.EXCEPTION || d.status === DeliveryStatus.RETURN_REQUIRED).length;
+
   res.json({
     asOf: new Date(),
     totals: {
-      drivers: routeCards.length,
-      deliveries: routeCards.reduce((n, r) => n + r.deliveries, 0),
-      completed: routeCards.reduce((n, r) => n + r.completedDeliveries, 0),
-      exceptions: routeCards.reduce((n, r) => n + r.exceptions, 0)
+      drivers: activeDriverCount,
+      deliveries: todayDeliveries.length,
+      completed: completedToday,
+      exceptions: exceptionsToday
     },
     routes: routeCards
   });
