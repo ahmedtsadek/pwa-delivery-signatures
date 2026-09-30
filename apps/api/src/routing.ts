@@ -22,8 +22,53 @@ export function estimatedDriveMinutes(a: GeoPoint, b: GeoPoint) {
 }
 
 export async function roadDurationMatrix(points: GeoPoint[]): Promise<number[][] | null> {
+  if (points.length < 2) return null;
+
+  const provider = String(process.env.ROUTER_PROVIDER || 'osrm').trim().toLowerCase();
+
+  if (provider === 'openrouteservice' || provider === 'ors') {
+    const key = String(process.env.OPENROUTESERVICE_API_KEY || process.env.ROUTER_API_KEY || '').trim();
+    if (!key) return null;
+    const base = (process.env.ROUTER_BASE_URL || 'https://api.heigit.org/openrouteservice/v2').replace(/\/$/, '');
+    const response = await fetch(`${base}/matrix/driving-car`, {
+      method: 'POST',
+      headers: {
+        'Authorization': key,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        locations: points.map(p => [p.longitude, p.latitude]),
+        metrics: ['duration']
+      })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`openrouteservice matrix failed: ${response.status}${detail ? ` ${detail.slice(0,300)}` : ''}`);
+    }
+    const payload: any = await response.json();
+    if (!Array.isArray(payload.durations)) throw new Error('openrouteservice did not return durations');
+    return payload.durations.map((row: Array<number | null>) => row.map(v => v == null ? Number.POSITIVE_INFINITY : Math.max(1, Math.round(v / 60))));
+  }
+
+  if (provider === 'locationiq') {
+    const key = String(process.env.LOCATIONIQ_API_KEY || process.env.ROUTER_API_KEY || '').trim();
+    if (!key) return null;
+    const base = (process.env.ROUTER_BASE_URL || 'https://us1.locationiq.com/v1').replace(/\/$/, '');
+    const coords = points.map(p => `${p.longitude},${p.latitude}`).join(';');
+    const url = `${base}/matrix/driving/${coords}?annotations=duration&key=${encodeURIComponent(key)}`;
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`LocationIQ matrix failed: ${response.status}${detail ? ` ${detail.slice(0,300)}` : ''}`);
+    }
+    const payload: any = await response.json();
+    if (!Array.isArray(payload.durations)) throw new Error('LocationIQ did not return durations');
+    return payload.durations.map((row: Array<number | null>) => row.map(v => v == null ? Number.POSITIVE_INFINITY : Math.max(1, Math.round(v / 60))));
+  }
+
   const base = (process.env.ROUTER_BASE_URL || process.env.ROUTING_BASE_URL || '').replace(/\/$/, '');
-  if (!base || points.length < 2) return null;
+  if (!base) return null;
   const coords = points.map(p => `${p.longitude},${p.latitude}`).join(';');
   const response = await fetch(`${base}/table/v1/driving/${coords}?annotations=duration`);
   if (!response.ok) throw new Error(`Routing table failed: ${response.status}`);
@@ -65,7 +110,9 @@ function sleep(ms: number) {
 }
 
 export async function geocodeAddress(address: string): Promise<GeoPoint | null> {
-  const base = (process.env.GEOCODER_BASE_URL || '').replace(/\/$/, '');
+  const provider = String(process.env.GEOCODER_PROVIDER || 'nominatim').trim().toLowerCase();
+  const defaultBase = provider === 'locationiq' ? 'https://us1.locationiq.com/v1' : '';
+  const base = (process.env.GEOCODER_BASE_URL || defaultBase).replace(/\/$/, '');
   if (!base) return null;
 
   const baseUrl = new URL(base);
@@ -79,16 +126,23 @@ export async function geocodeAddress(address: string): Promise<GeoPoint | null> 
   if (minIntervalMs > 0 && elapsed < minIntervalMs) await sleep(minIntervalMs - elapsed);
 
   const url = new URL(base + '/search');
-  url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('format', provider === 'locationiq' ? 'json' : 'jsonv2');
   url.searchParams.set('limit', '1');
   url.searchParams.set('q', address);
   const countrycodes = String(process.env.GEOCODER_COUNTRYCODES || '').trim();
   if (countrycodes) url.searchParams.set('countrycodes', countrycodes);
 
+  if (provider === 'locationiq') {
+    const key = String(process.env.LOCATIONIQ_API_KEY || process.env.GEOCODER_API_KEY || '').trim();
+    if (!key) return null;
+    url.searchParams.set('key', key);
+  }
+
   lastGeocodeRequestAt = Date.now();
   const response = await fetch(url, {
     headers: {
-      'user-agent': process.env.GEOCODER_USER_AGENT || 'PWA-Pharmacy-Delivery/1.1.6'
+      'user-agent': process.env.GEOCODER_USER_AGENT || 'PWA-Pharmacy-Delivery/1.1.7',
+      'accept': 'application/json'
     }
   });
   if (!response.ok) throw new Error(`Geocoder failed: ${response.status}`);
