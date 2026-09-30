@@ -420,10 +420,11 @@ app.post('/api/organizations', async (req, res) => {
 app.get('/api/organizations/:organizationId/drivers', async (req, res) => {
   const actor = await requireOrganizationUser(req, res, req.params.organizationId);
   if (!actor) return;
+  const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
   const drivers = await prisma.driver.findMany({
-    where: { organizationId: req.params.organizationId, active: true },
+    where: { organizationId: req.params.organizationId, ...(includeInactive ? {} : { active: true }) },
     include: { aliases: true },
-    orderBy: { displayName: 'asc' }
+    orderBy: [{ active: 'desc' }, { displayName: 'asc' }]
   });
   res.json({ drivers });
 });
