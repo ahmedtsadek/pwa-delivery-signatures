@@ -1,5 +1,5 @@
 const CACHE='delivery-shell-v5';
-const SHELL=['/','/driver','/enroll','/manifest.webmanifest','/icon.svg','/icons/icon-192.png','/icons/icon-512.png','/icons/apple-touch-icon.png'];
+const SHELL=['/','/driver','/enroll','/manifest.webmanifest','/icon.svg','/pwa-icon/192','/pwa-icon/512','/pwa-icon/180'];
 
 async function safeCachePut(cache, request, response) {
   try {
